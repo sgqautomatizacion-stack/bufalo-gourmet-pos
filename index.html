@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Búfalo Gourmet | Sistema de Gestión</title>
+<style>
+:root{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;color:#f4f4f4;background:#1a1a1a}
+*{box-sizing:border-box}
+body{margin:0}
+.top-session-bar{background:#121212;border-bottom:1px solid #333;padding:10px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;font-size:13px}
+.user-info{color:#ccc;display:flex;align-items:center;gap:8px}
+.user-badge{background:#2a2a2a;border:1px solid #444;color:#f39c12;padding:4px 10px;border-radius:20px;font-weight:bold}
+.btn-logout{background:#8b0000;color:#fff;border:1px solid #a93226;padding:7px 14px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px;transition:background 0.2s}
+.btn-logout:hover{background:#a93226}
+header{background:#8b0000;color:#fff;padding:40px 20px;text-align:center;border-bottom:4px solid #d2691e}
+header .logo-img{max-width:170px;height:auto;display:block;margin:0 auto 15px auto;filter:drop-shadow(0px 4px 8px rgba(0,0,0,0.3))}
+header .tag{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#f39c12;font-weight:bold}
+h1{font-size:clamp(28px,4vw,40px);margin:10px 0;text-transform:uppercase;letter-spacing:1px}
+header p{max-width:700px;margin:0 auto;color:#e0e0e0;line-height:1.6}
+main{max-width:1100px;margin:30px auto;padding:0 20px}
+h2{font-size:22px;margin-bottom:8px;color:#d2691e}
+.intro{color:#aaa;margin-bottom:24px;line-height:1.6}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+.card{background:#2a2a2a;border-radius:10px;padding:24px;box-shadow:0 4px 12px rgba(0,0,0,0.4);border-left:5px solid #d2691e;display:flex;flex-direction:column;min-height:220px}
+.symbol{font-size:32px;background:#333;width:60px;height:60px;display:grid;place-items:center;border-radius:12px;margin-bottom:15px}
+.card h3{font-size:20px;margin:0 0 7px;color:#fff}
+.card p{font-size:14px;line-height:1.5;color:#bbb;margin:0 0 20px;flex:1}
+.card a{display:inline-block;text-align:center;padding:11px 14px;border-radius:6px;background:#8b0000;color:#fff;font-weight:bold;text-decoration:none;transition:background 0.2s}
+.card a:hover{background:#a93226}
+.note{margin-top:30px;background:#262626;border-left:4px solid #d2691e;border-radius:6px;padding:16px 18px;font-size:14px;line-height:1.6;color:#ccc}
+.note code{background:#333;color:#f39c12;padding:2px 6px;border-radius:4px}
+footer{text-align:center;color:#777;font-size:13px;padding:30px 15px}
+</style>
+</head>
+<body>
+<!-- Barra superior de sesión activa y botón de cierre -->
+<div class="top-session-bar">
+    <div class="user-info">
+        <span>🟢 Sesión activa:</span>
+        <span class="user-badge" id="usuarioActivo">Verificando usuario...</span>
+    </div>
+    <button type="button" class="btn-logout" id="btnCerrarSesion">🚪 Cerrar Sesión</button>
+</div>
+
+<header>
+    <img src="logo.png" alt="Búfalo Gourmet Logo" class="logo-img" onerror="this.style.display='none'">
+    <div class="tag">Burger & Coffee</div>
+    <h1>Búfalo Gourmet</h1>
+    <p>Sistema de control operativo: Inventario, Menú, Menú del Día, Órdenes, SCM, Turnos y Personal.</p>
+</header>
+<main>
+    <h2>Panel de Control</h2>
+    <p class="intro">Selecciona el módulo del sistema que deseas gestionar.</p>
+    
+    <section class="grid" aria-label="Módulos del restaurante">
+        <article class="card">
+            <div class="symbol" aria-hidden="true">🥩</div>
+            <h3>Inventario (ERP)</h3>
+            <p>Control de stock actual, insumos cárnicos y alertas de mínimos en Supabase.</p>
+            <a href="inventario.html">Abrir Inventario</a>
+        </article>
+
+        <article class="card">
+            <div class="symbol" aria-hidden="true">📜</div>
+            <h3>Menú y Platos</h3>
+            <p>Administración de platos, cartas de cortes y disponibilidad en línea.</p>
+            <a href="platos.html">Abrir Menú</a>
+        </article>
+
+        <article class="card">
+            <div class="symbol" aria-hidden="true">🍲</div>
+            <h3>Menú del Día</h3>
+            <p>Configuración diaria del almuerzo ejecutivo, sopas, entradas y proteínas.</p>
+            <a href="menu_dia.html">Abrir Menú del Día</a>
+        </article>
+
+        <article class="card">
+            <div class="symbol" aria-hidden="true">🛒</div>
+            <h3>Órdenes y Ventas</h3>
+            <p>Registro de pedidos con descuento automático e inteligente de inventario vía recetas.</p>
+            <a href="ordenes.html">Abrir Órdenes</a>
+        </article>
+
+        <article class="card">
+            <div class="symbol" aria-hidden="true">🚚</div>
+            <h3>Proveedores y Compras (SCM)</h3>
+            <p>Gestión de órdenes de abastecimiento y pedidos a proveedores.</p>
+            <a href="compras.html">Abrir Compras</a>
+        </article>
+
+        <article class="card">
+            <div class="symbol" aria-hidden="true">⏰</div>
+            <h3>Personal y Turnos</h3>
+            <p>Asignación de horarios al equipo de cocina y sala para cubrir horas pico.</p>
+            <a href="turnos.html">Abrir Turnos</a>
+        </article>
+
+        <article class="card">
+            <div class="symbol" aria-hidden="true">👤</div>
+            <h3>Gestión de Empleados</h3>
+            <p>Registro, control de cargos e importación masiva por CSV ante la rotación.</p>
+            <a href="empleados.html">Abrir Empleados</a>
+        </article>
+    </section>
+
+    <aside class="note">
+        <strong>Estado de conexión:</strong> Conectado directamente con la base de datos de <code>Búfalo Gourmet</code> en Supabase.
+    </aside>
+</main>
+<footer>Búfalo Gourmet · Sistema Operativo Interno</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "https://cuoyvtybvosxfpthcrbe.supabase.co"; 
+const SUPABASE_KEY = "sb_publishable_X7_VB3rLXgT1U257tuLwtQ_SBNONS1F"; 
+
+const db = (window.supabase && window.supabase.createClient) 
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) 
+    : null;
+
+async function verificarProteccionRuta() {
+    const sesionLocal = sessionStorage.getItem('bufalo_sesion_activa');
+    const usuarioLocal = sessionStorage.getItem('bufalo_usuario');
+
+    if (sesionLocal === 'true' && usuarioLocal) {
+        document.getElementById('usuarioActivo').textContent = usuarioLocal;
+        return;
+    }
+
+    if (db) {
+        try {
+            const { data } = await db.auth.getSession();
+            if (data?.session) {
+                const email = data.session.user.email;
+                sessionStorage.setItem('bufalo_sesion_activa', 'true');
+                sessionStorage.setItem('bufalo_usuario', email);
+                document.getElementById('usuarioActivo').textContent = email;
+                return;
+            }
+        } catch (e) {
+            console.warn("Error verificando sesión:", e);
+        }
+    }
+
+    // Si no hay sesión activa, redirigir al login
+    location.replace('login.html');
+}
+
+document.getElementById('btnCerrarSesion').addEventListener('click', async () => {
+    sessionStorage.removeItem('bufalo_sesion_activa');
+    sessionStorage.removeItem('bufalo_usuario');
+
+    if (db) {
+        try {
+            await db.auth.signOut();
+        } catch (e) {
+            console.warn("Error cerrando sesión en Supabase:", e);
+        }
+    }
+
+    location.replace('login.html');
+});
+
+verificarProteccionRuta();
+</script>
+</body>
+</html>

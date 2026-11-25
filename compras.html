@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Búfalo Gourmet - Pedidos de Compra (SCM)</title>
+<style>
+:root{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;color:#f4f4f4;background:#1a1a1a}
+body{margin:0}
+header{background:#8b0000;color:white;padding:20px;text-align:center;border-bottom:3px solid #d2691e}
+header .logo-img{max-width:140px;height:auto;display:block;margin:0 auto 10px auto;filter:drop-shadow(0px 4px 8px rgba(0,0,0,0.3))}
+header h1{margin:0;font-size:24px;text-transform:uppercase}
+nav{background:#2a2a2a;padding:10px;text-align:center;border-bottom:1px solid #444}
+nav a{color:#f39c12;text-decoration:none;margin:0 15px;font-weight:bold}
+nav a:hover{text-decoration:underline}
+main{max-width:1100px;margin:25px auto;padding:0 16px}
+.panel{background:#2a2a2a;border-radius:10px;padding:24px;margin-bottom:20px;box-shadow:0 4px 8px rgba(0,0,0,0.4);border-left:5px solid #d2691e}
+form{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.field-group{display:flex;flex-direction:column;flex:1;min-width:200px}
+.field-group label{font-size:12px;color:#ccc;margin-bottom:5px;font-weight:bold}
+input,select{padding:11px;border:1px solid #444;border-radius:5px;background:#1a1a1a;color:#fff;font-size:14px}
+.full-width{flex:100%}
+
+/* Tarjeta informativa destacada para ver el stock y unidad del ingrediente seleccionado */
+.info-insumo-card{flex:100%;background:#1e1612;border:2px solid #d2691e;border-radius:8px;padding:16px;margin:4px 0 8px 0;display:none;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+.info-metric{display:flex;flex-direction:column}
+.info-metric span.lbl{font-size:12px;color:#aaa;text-transform:uppercase;letter-spacing:0.5px}
+.info-metric span.val{font-size:22px;font-weight:bold;color:#fff;margin-top:2px}
+.info-metric span.val.unidad-highlight{color:#f39c12;background:#332414;padding:3px 10px;border-radius:6px;border:1px solid #f39c12;font-size:18px;display:inline-block}
+.stock-alerta{color:#ff6b6b !important}
+.stock-bueno{color:#2ecc71 !important}
+
+.input-with-unit{display:flex;align-items:stretch}
+.input-with-unit input{flex:1;border-top-right-radius:0;border-bottom-right-radius:0}
+.unit-tag{background:#333;color:#f39c12;border:1px solid #444;border-left:0;padding:0 14px;display:flex;align-items:center;font-weight:bold;font-size:13px;border-top-right-radius:5px;border-bottom-right-radius:5px;white-space:nowrap}
+
+button{padding:11px 18px;background:#8b0000;border:0;border-radius:5px;color:white;cursor:pointer;font-weight:bold}
+button:hover{background:#a93226}
+.btn-recibir{background:#27ae60;padding:7px 12px;font-size:12px}
+.btn-recibir:hover{background:#2ecc71}
+.btn-remove{background:#512d2d;padding:7px 11px;color:#ff8080;font-size:12px}
+.btn-remove:hover{background:#7a3838}
+.secundario{background:#555}
+.tabla{overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin-top:15px}
+th{background:#333;color:#f39c12;text-align:left;padding:12px}
+td{padding:12px;border-bottom:1px solid #444;font-size:14px}
+.badge-pendiente{background:#d35400;color:#fff;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:bold}
+.badge-completado{background:#27ae60;color:#fff;padding:3px 8px;border-radius:4px;font-size:12px;font-weight:bold}
+#mensaje{margin-top:12px;font-weight:bold;padding:10px;border-radius:5px;}
+.error{background:#512d2d;color:#ff8080;}
+.exito{background:#2d5135;color:#80ff9f;}
+</style>
+</head>
+<body>
+<header>
+    <img src="logo.png" alt="Búfalo Gourmet Logo" class="logo-img" onerror="this.style.display='none'">
+    <h1>Búfalo Gourmet</h1>
+    <p>Módulo SCM · Pedidos de Compra a Proveedores y Abastecimiento</p>
+</header>
+<nav>
+    <a href="index.html">← Volver al Menú Principal</a>
+</nav>
+
+<main>
+<section class="panel">
+    <h2>Registrar Pedido de Compra (`pedidos_compra`)</h2>
+    <p style="color:#aaa;font-size:14px;margin-bottom:20px;">Selecciona un ingrediente de la lista para visualizar de forma clara su <strong>stock actual, alerta de mínimo y unidad exacta de medida</strong> antes de digitar la cantidad a pedir.</p>
+    
+    <form id="formularioCompra">
+        <div class="field-group" style="flex:2;min-width:260px;">
+            <label for="ingrediente_id">1. Ingrediente / Insumo a Solicitar:</label>
+            <select id="ingrediente_id" required>
+                <option value="">Cargando ingredientes desde Supabase...</option>
+            </select>
+        </div>
+
+        <!-- Tarjeta visual de stock disponible y unidades -->
+        <div id="infoInsumoCard" class="info-insumo-card">
+            <div class="info-metric">
+                <span class="lbl">Ingrediente Seleccionado</span>
+                <span class="val" id="cardNombre">-</span>
+            </div>
+            <div class="info-metric">
+                <span class="lbl">Cantidad Disponible Hoy</span>
+                <span class="val" id="cardStock">0</span>
+            </div>
+            <div class="info-metric">
+                <span class="lbl">Stock Mínimo Sugerido</span>
+                <span class="val" id="cardMinimo" style="font-size:18px;color:#ccc;">0</span>
+            </div>
+            <div class="info-metric">
+                <span class="lbl">Se pide y mide en</span>
+                <span class="val unidad-highlight" id="cardUnidad">UNIDAD</span>
+            </div>
+            <div class="info-metric">
+                <span class="lbl">Estado en Bodega</span>
+                <span class="val" id="cardEstado" style="font-size:16px;">-</span>
+            </div>
+        </div>
+        
+        <div class="field-group">
+            <label for="cantidad_solicitada">2. Cantidad Solicitada:</label>
+            <div class="input-with-unit">
+                <input id="cantidad_solicitada" type="number" step="any" min="0.01" placeholder="Ej. 5000" required>
+                <span class="unit-tag" id="tagUnidadInput">Unid.</span>
+            </div>
+        </div>
+        
+        <div class="field-group">
+            <label for="fecha_entrega_estimada">3. Fecha Entrega Estimada:</label>
+            <input id="fecha_entrega_estimada" type="date" required>
+        </div>
+        
+        <div class="field-group">
+            <label for="estado">4. Estado del Pedido:</label>
+            <select id="estado" required>
+                <option value="Pendiente">🕒 Pendiente (Por llegar)</option>
+                <option value="Completado">✅ Completado (Sumar al inventario ya)</option>
+            </select>
+        </div>
+
+        <div class="full-width" style="display:flex;gap:10px;margin-top:10px;">
+            <button type="submit">Guardar Pedido de Compra</button>
+            <button type="button" class="secundario" id="limpiarBtn">Limpiar Selección</button>
+        </div>
+    </form>
+    <div id="mensaje"></div>
+</section>
+
+<section class="panel">
+    <h2>Historial de Pedidos de Compra Recientes</h2>
+    <div class="tabla">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Ingrediente</th>
+                    <th>Cantidad Solicitada</th>
+                    <th>Fecha Pedido</th>
+                    <th>Entrega Estimada</th>
+                    <th>Estado</th>
+                    <th>Acción de Bodega</th>
+                </tr>
+            </thead>
+            <tbody id="listaCompras"></tbody>
+        </table>
+    </div>
+</section>
+</main>
+
+<script>
+const SUPABASE_URL = "https://cuoyvtybvosxfpthcrbe.supabase.co"; 
+const SUPABASE_KEY = "sb_publishable_X7_VB3rLXgT1U257tuLwtQ_SBNONS1F"; 
+
+let insumosCache = [];
+const $ = id => document.getElementById(id);
+
+$('fecha_entrega_estimada').valueAsDate = new Date();
+
+function mostrarMensaje(texto, esError = false) {
+    const msg = $('mensaje');
+    msg.textContent = texto;
+    msg.className = esError ? 'error' : 'exito';
+}
+
+function formatearNumero(n) {
+    return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 2 }).format(n || 0);
+}
+
+async function cargarInsumos() {
+    const select = $('ingrediente_id');
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/rest/v1/ingredientes?select=*&order=nombre.asc`, {
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+        
+        if (!res.ok) throw new Error('Error al cargar ingredientes');
+        
+        insumosCache = await res.json();
+        const valorPrevio = select.value;
+        select.innerHTML = '<option value="">-- Seleccione un ingrediente para ver su stock y unidad --</option>';
+        
+        if (!Array.isArray(insumosCache) || insumosCache.length === 0) {
+            select.innerHTML = '<option value="">⚠️ No hay ingredientes registrados en inventario</option>';
+            return;
+        }
+
+        // Separar en dos grupos: Primero los que tienen Bajo Stock (urgentes por pedir) y luego los demás
+        const grpUrgentes = document.createElement('optgroup');
+        grpUrgentes.label = "⚠️ BAJO STOCK (Prioritarios para pedir)";
+        
+        const grpOptimos = document.createElement('optgroup');
+        grpOptimos.label = "✅ STOCK ÓPTIMO EN BODEGA";
+
+        let hayUrgentes = false;
+
+        insumosCache.forEach(i => {
+            const stockAct = parseFloat(i.stock_actual) || 0;
+            const stockMin = parseFloat(i.stock_minimo) || 0;
+            const esBajo = stockAct <= stockMin;
+
+            const opt = document.createElement('option');
+            opt.value = i.id;
+            const icono = esBajo ? '⚠️' : '🟢';
+            opt.textContent = `${icono} ${i.nombre} — Disponible: ${formatearNumero(stockAct)} ${i.unidad_medida.toUpperCase()}`;
+            if (String(i.id) === String(valorPrevio)) opt.selected = true;
+
+            if (esBajo) {
+                grpUrgentes.append(opt);
+                hayUrgentes = true;
+            } else {
+                grpOptimos.append(opt);
+            }
+        });
+
+        if (hayUrgentes) select.append(grpUrgentes);
+        select.append(grpOptimos);
+
+        actualizarTarjetaInsumo();
+    } catch (e) {
+        console.error('Error cargando insumos:', e);
+        select.innerHTML = '<option value="">❌ Error al cargar ingredientes</option>';
+    }
+}
+
+// Mostrar visualmente los detalles del ingrediente elegido para no pedir en la unidad equivocada
+function actualizarTarjetaInsumo() {
+    const idSel = $('ingrediente_id').value;
+    const card = $('infoInsumoCard');
+    const tagInput = $('tagUnidadInput');
+    const inputCant = $('cantidad_solicitada');
+
+    if (!idSel) {
+        card.style.display = 'none';
+        tagInput.textContent = 'Unid.';
+        inputCant.placeholder = 'Cantidad a pedir';
+        return;
+    }
+
+    const insumo = insumosCache.find(i => String(i.id) === String(idSel));
+    if (!insumo) return;
+
+    const stockAct = parseFloat(insumo.stock_actual) || 0;
+    const stockMin = parseFloat(insumo.stock_minimo) || 0;
+    const unidad = (insumo.unidad_medida || 'unidad').toUpperCase();
+    const esBajo = stockAct <= stockMin;
+
+    $('cardNombre').textContent = insumo.nombre;
+    $('cardStock').textContent = `${formatearNumero(stockAct)} ${insumo.unidad_medida}`;
+    $('cardStock').className = 'val ' + (esBajo ? 'stock-alerta' : 'stock-bueno');
+    $('cardMinimo').textContent = `${formatearNumero(stockMin)} ${insumo.unidad_medida}`;
+    $('cardUnidad').textContent = unidad;
+    $('cardEstado').innerHTML = esBajo 
+        ? '<span style="color:#ff6b6b;">⚠️ Requiere Reabastecer</span>' 
+        : '<span style="color:#2ecc71;">✅ Nivel Suficiente</span>';
+
+    tagInput.textContent = unidad;
+    inputCant.placeholder = `Cantidad en ${insumo.unidad_medida}`;
+    card.style.display = 'flex';
+}
+
+$('ingrediente_id').addEventListener('change', actualizarTarjetaInsumo);
+
+async function sumarStockAlInventario(ingredienteId, cantidadSumar) {
+    const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+    const resIng = await fetch(`${baseUrl}/rest/v1/ingredientes?id=eq.${ingredienteId}&select=*`, {
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    if (!resIng.ok) throw new Error('No se pudo consultar el ingrediente en inventario');
+    const datos = await resIng.json();
+    const ing = datos[0];
+    if (!ing) throw new Error('Ingrediente no encontrado en inventario');
+
+    const stockAnterior = parseFloat(ing.stock_actual) || 0;
+    const nuevoStock = Math.round((stockAnterior + parseFloat(cantidadSumar)) * 100) / 100;
+
+    const resPatch = await fetch(`${baseUrl}/rest/v1/ingredientes?id=eq.${ingredienteId}`, {
+        method: 'PATCH',
+        headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ stock_actual: nuevoStock })
+    });
+
+    if (!resPatch.ok) throw new Error(await resPatch.text());
+    return { nombre: ing.nombre, unidad: ing.unidad_medida, stockAnterior, nuevoStock };
+}
+
+async function recibirPedidoPendiente(pedidoId, ingredienteId, cantidadSolicitada) {
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        // 1. Cambiar estado en pedidos_compra a Completado
+        const resOrden = await fetch(`${baseUrl}/rest/v1/pedidos_compra?id=eq.${pedidoId}`, {
+            method: 'PATCH',
+            headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ estado: 'Completado' })
+        });
+        if (!resOrden.ok) throw new Error(await resOrden.text());
+
+        // 2. Sumar cantidad_solicitada al stock_actual de ingredientes
+        const info = await sumarStockAlInventario(ingredienteId, cantidadSolicitada);
+
+        await cargarInsumos();
+        await cargarComprasRecientes();
+        mostrarMensaje(`✅ ¡Pedido #${pedidoId} recibido! Se sumaron +${formatearNumero(cantidadSolicitada)} ${info.unidad} a "${info.nombre}" (Stock: ${formatearNumero(info.stockAnterior)} → ${formatearNumero(info.nuevoStock)}).`);
+    } catch (e) {
+        mostrarMensaje('Error al recibir pedido: ' + e.message, true);
+    }
+}
+
+async function eliminarPedido(pedidoId) {
+    if (!confirm(`¿Seguro que deseas eliminar el registro del pedido #${pedidoId}?`)) return;
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/rest/v1/pedidos_compra?id=eq.${pedidoId}`, {
+            method: 'DELETE',
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+        if (!res.ok) throw new Error(await res.text());
+        await cargarComprasRecientes();
+        mostrarMensaje(`🗑️ Pedido #${pedidoId} eliminado.`);
+    } catch (e) {
+        mostrarMensaje('Error al eliminar pedido: ' + e.message, true);
+    }
+}
+
+async function cargarComprasRecientes() {
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/rest/v1/pedidos_compra?select=*,ingredientes(nombre,unidad_medida)&order=id.desc&limit=25`, {
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+        
+        if (!res.ok) {
+            const errTxt = await res.text();
+            throw new Error(errTxt);
+        }
+
+        const compras = await res.json();
+        const tbody = $('listaCompras');
+        tbody.replaceChildren();
+        
+        if (!Array.isArray(compras) || compras.length === 0) {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = 7;
+            td.textContent = 'No hay pedidos de compra registrados en pedidos_compra.';
+            td.style.textAlign = 'center';
+            tr.append(td);
+            tbody.append(tr);
+            return;
+        }
+
+        compras.forEach(c => {
+            const tr = document.createElement('tr');
+            const unidadTexto = c.ingredientes?.unidad_medida ? c.ingredientes.unidad_medida : '';
+            const nombreInsumo = c.ingredientes?.nombre || ('Ingrediente #' + c.ingrediente_id);
+
+            const tdId = document.createElement('td');
+            tdId.textContent = c.id;
+
+            const tdIns = document.createElement('td');
+            tdIns.innerHTML = `<strong>${nombreInsumo}</strong>`;
+
+            const tdCant = document.createElement('td');
+            tdCant.style.fontWeight = 'bold';
+            tdCant.style.color = '#f39c12';
+            tdCant.textContent = `${formatearNumero(c.cantidad_solicitada)} ${unidadTexto}`;
+
+            const tdFechaPed = document.createElement('td');
+            tdFechaPed.textContent = c.fecha_pedido ? new Date(c.fecha_pedido).toLocaleDateString('es-CO') : 'Hoy';
+
+            const tdFechaEnt = document.createElement('td');
+            tdFechaEnt.textContent = c.fecha_entrega_estimada ?? 'N/A';
+
+            const tdEst = document.createElement('td');
+            const spanEst = document.createElement('span');
+            spanEst.className = c.estado === 'Completado' ? 'badge-completado' : 'badge-pendiente';
+            spanEst.textContent = c.estado;
+            tdEst.append(spanEst);
+
+            const tdAccion = document.createElement('td');
+            tdAccion.style.display = 'flex';
+            tdAccion.style.gap = '6px';
+            tdAccion.style.alignItems = 'center';
+
+            if (c.estado === 'Pendiente') {
+                const btnRecibir = document.createElement('button');
+                btnRecibir.type = 'button';
+                btnRecibir.className = 'btn-recibir';
+                btnRecibir.textContent = '📦 Recibir y Sumar';
+                btnRecibir.onclick = () => recibirPedidoPendiente(c.id, c.ingrediente_id, c.cantidad_solicitada);
+                tdAccion.append(btnRecibir);
+            } else {
+                const spanOk = document.createElement('small');
+                spanOk.style.color = '#2ecc71';
+                spanOk.style.fontWeight = 'bold';
+                spanOk.textContent = '✔ Sumado a bodega';
+                tdAccion.append(spanOk);
+            }
+
+            const btnDel = document.createElement('button');
+            btnDel.type = 'button';
+            btnDel.className = 'btn-remove';
+            btnDel.textContent = '🗑️';
+            btnDel.title = 'Eliminar pedido';
+            btnDel.onclick = () => eliminarPedido(c.id);
+            tdAccion.append(btnDel);
+
+            tr.append(tdId, tdIns, tdCant, tdFechaPed, tdFechaEnt, tdEst, tdAccion);
+            tbody.append(tr);
+        });
+    } catch (e) {
+        console.error('Error cargando pedidos_compra:', e);
+        mostrarMensaje('⚠️ Verifica los permisos RLS de la tabla pedidos_compra en Supabase: ' + e.message, true);
+    }
+}
+
+$('formularioCompra').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const ingredienteId = parseInt($('ingrediente_id').value, 10);
+    const cantidadSolicitada = parseFloat($('cantidad_solicitada').value);
+    const fechaEntregaEstimada = $('fecha_entrega_estimada').value;
+    const estado = $('estado').value;
+
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/rest/v1/pedidos_compra`, {
+            method: 'POST',
+            headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({ 
+                ingrediente_id: ingredienteId, 
+                cantidad_solicitada: cantidadSolicitada, 
+                fecha_entrega_estimada: fechaEntregaEstimada,
+                estado: estado
+            })
+        });
+
+        if (!res.ok) throw new Error(await res.text());
+
+        let msgExtra = '';
+        if (estado === 'Completado') {
+            const info = await sumarStockAlInventario(ingredienteId, cantidadSolicitada);
+            msgExtra = ` Se sumaron automáticamente +${formatearNumero(cantidadSolicitada)} ${info.unidad} a "${info.nombre}" (Nuevo stock: ${formatearNumero(info.nuevoStock)} ${info.unidad}).`;
+        } else {
+            msgExtra = ' Quedó en estado Pendiente (usa el botón "📦 Recibir y Sumar" cuando llegue el proveedor).';
+        }
+
+        $('formularioCompra').reset();
+        $('fecha_entrega_estimada').valueAsDate = new Date();
+        actualizarTarjetaInsumo();
+        await cargarInsumos();
+        await cargarComprasRecientes();
+        mostrarMensaje('✅ ¡Pedido guardado en pedidos_compra!' + msgExtra);
+    } catch (err) {
+        mostrarMensaje('Error al registrar pedido: ' + err.message, true);
+    }
+});
+
+$('limpiarBtn').onclick = () => {
+    $('formularioCompra').reset();
+    $('fecha_entrega_estimada').valueAsDate = new Date();
+    actualizarTarjetaInsumo();
+};
+
+cargarInsumos();
+cargarComprasRecientes();
+</script>
+</body>
+</html>

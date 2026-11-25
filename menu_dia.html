@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Búfalo Gourmet - Menú del Día y Recetario Escalable</title>
+<style>
+:root{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;color:#f4f4f4;background:#1a1a1a}
+body{margin:0}
+header{background:#8b0000;color:white;padding:20px;text-align:center;border-bottom:3px solid #d2691e}
+header .logo-img{max-width:140px;height:auto;display:block;margin:0 auto 10px auto;filter:drop-shadow(0px 4px 8px rgba(0,0,0,0.3))}
+header h1{margin:0;font-size:24px;text-transform:uppercase}
+nav{background:#2a2a2a;padding:10px;text-align:center;border-bottom:1px solid #444}
+nav a{color:#f39c12;text-decoration:none;margin:0 15px;font-weight:bold}
+nav a:hover{text-decoration:underline}
+main{max-width:1150px;margin:25px auto;padding:0 16px}
+.panel{background:#2a2a2a;border-radius:10px;padding:24px;margin-bottom:20px;box-shadow:0 4px 8px rgba(0,0,0,0.4);border-left:5px solid #d2691e}
+form{display:flex;gap:12px;flex-wrap:wrap}
+input,select{padding:10px;border:1px solid #444;border-radius:5px;background:#1a1a1a;color:#fff;flex:1;min-width:160px}
+.full-width{flex:100%}
+.sub-panel{background:#222;border:1px solid #3d3d3d;border-radius:8px;padding:15px;margin-top:10px;flex:100%}
+.sub-panel h3{margin:0 0 10px 0;font-size:16px;color:#f39c12}
+.recetario-bar{background:#1f1712;border:1px dashed #d2691e;border-radius:8px;padding:15px;margin-bottom:15px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.grid-proteinas{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;width:100%}
+.prot-box{background:#1a1a1a;padding:10px;border-radius:6px;border:1px solid #333}
+.prot-box label{display:block;font-size:13px;color:#ccc;margin-bottom:5px;font-weight:bold}
+.prot-box input{width:90%;min-width:unset}
+.insumo-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap;background:#1a1a1a;padding:8px;border-radius:6px;border:1px solid #333}
+.insumo-row small{color:#aaa;font-size:11px;display:block;margin-bottom:2px}
+.field-group{display:flex;flex-direction:column;flex:1;min-width:140px}
+button{padding:11px 18px;background:#8b0000;border:0;border-radius:5px;color:white;cursor:pointer;font-weight:bold}
+button:hover{background:#a93226}
+.btn-add{background:#d2691e;padding:8px 14px;font-size:13px}
+.btn-add:hover{background:#e67e22}
+.btn-save-plantilla{background:#27ae60;padding:11px 18px}
+.btn-save-plantilla:hover{background:#2ecc71}
+.btn-remove{background:#512d2d;padding:8px 12px;color:#ff8080;align-self:flex-end}
+.secundario{background:#555}
+.tabla{overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin-top:15px}
+th{background:#333;color:#f39c12;text-align:left;padding:12px}
+td{padding:12px;border-bottom:1px solid #444;font-size:14px}
+.badge{font-size:12px;color:#f39c12;background:#333;padding:3px 7px;border-radius:4px;display:inline-block;margin:2px}
+.cupo-ok{color:#2ecc71;font-weight:bold}
+.cupo-agotado{color:#e74c3c;font-weight:bold}
+.info-escala{background:#2c3e50;color:#ecf0f1;padding:8px 12px;border-radius:5px;font-size:13px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+#mensaje{margin-top:12px;font-weight:bold;padding:10px;border-radius:5px;}
+.error{background:#512d2d;color:#ff8080;}
+.exito{background:#2d5135;color:#80ff9f;}
+</style>
+</head>
+<body>
+<header>
+    <img src="logo.png" alt="Búfalo Gourmet Logo" class="logo-img">
+    <h1>Búfalo Gourmet</h1>
+    <p>Gestión de Producción, Recetario Detallado y Escalado Automático por Cupos</p>
+</header>
+<nav>
+    <a href="index.html">← Volver al Menú Principal</a>
+</nav>
+
+<main>
+<section class="panel">
+    <h2>1. Configurar Menú Base y Cupos de Hoy</h2>
+    
+    <!-- Bloque A (Arriba): Únicamente para CARGAR una receta existente del Recetario -->
+    <div class="recetario-bar">
+        <div style="flex:1;width:100%;">
+            <label style="display:block;font-size:14px;color:#f39c12;font-weight:bold;margin-bottom:6px;">📖 Paso Opcional: Cargar un Menú Existente desde el Recetario (Autocompleta el formulario y sus ingredientes):</label>
+            <select id="selectorPlantilla" style="width:100%;">
+                <option value="">-- Seleccionar una receta gourmet casera o guardada para autocompletar --</option>
+            </select>
+        </div>
+    </div>
+
+    <form id="formulario">
+        <div style="display:flex;gap:12px;width:100%;flex-wrap:wrap">
+            <div style="flex:1">
+                <label style="font-size:12px;color:#aaa">Fecha del Menú</label>
+                <input id="fecha" type="date" required style="width:95%">
+            </div>
+            <div style="flex:1">
+                <label style="font-size:12px;color:#f39c12;font-weight:bold">⚡ Cupos Totales Producidos Hoy (Al cambiar este número, se recalculan todas las cantidades):</label>
+                <input id="cupos_disponibles" type="number" min="1" value="40" required style="width:95%;border-color:#f39c12;font-weight:bold;font-size:15px">
+            </div>
+        </div>
+
+        <input id="sopa" placeholder="Sopa del día (ej. Sancochito casero trifásico)" required>
+        <input id="entrada" placeholder="Entrada / Principio (ej. Frijoles antioqueños o Pasta al pesto)" required>
+        <input id="jugo" placeholder="Jugo del día (ej. Jugo de maracuyá y mango)" required>
+        <input id="postre" placeholder="Postre del día (ej. Cuajada con melao de panela)" required>
+
+        <!-- Stock por unidades de proteína -->
+        <div class="sub-panel">
+            <h3>2. Unidades Disponibles por Proteína (Se restarán por unidad vendida en Órdenes)</h3>
+            <div class="grid-proteinas">
+                <div class="prot-box">
+                    <label>🍗 Pollo ($22.000) — Unid:</label>
+                    <input id="stock_pollo" type="number" min="0" value="10" required>
+                </div>
+                <div class="prot-box">
+                    <label>🥩 Cerdo ($22.000) — Unid:</label>
+                    <input id="stock_cerdo" type="number" min="0" value="10" required>
+                </div>
+                <div class="prot-box">
+                    <label>🥩 Churrasquito ($25.000) — Unid:</label>
+                    <input id="stock_churrasquito" type="number" min="0" value="10" required>
+                </div>
+                <div class="prot-box">
+                    <label>🐟 Trucha ($25.000) — Unid:</label>
+                    <input id="stock_trucha" type="number" min="0" value="5" required>
+                </div>
+                <div class="prot-box">
+                    <label>🥓 Ceviche Chicharrón ($25.000) — Unid:</label>
+                    <input id="stock_ceviche" type="number" min="0" value="5" required>
+                </div>
+                <div class="prot-box">
+                    <label>🍣 Salmón ($30.000) — Unid:</label>
+                    <input id="stock_salmon" type="number" min="0" value="5" required>
+                </div>
+            </div>
+        </div>
+
+        <!-- Insumos gastados del inventario con escalado dinámico -->
+        <div class="sub-panel">
+            <h3>3. Desglose de Ingredientes del Inventario (Escalado Dinámico según Cupos)</h3>
+            <div class="info-escala">
+                <span>🔄 <strong>Cálculo Inteligente Activo:</strong> Cada ingrediente tiene una medida por almuerzo (porción unitaria) y multiplica automáticamente el total según los <strong id="lblCuposActivos">40</strong> cupos producidos. También puedes editar el total manualmente si gastaste un poco más o menos en cocina.</span>
+                <button type="button" class="secundario" id="btnRecalcular" style="padding:6px 12px;font-size:12px;">🔄 Forzar Recálculo por Cupos</button>
+            </div>
+            <div id="contenedorInsumos"></div>
+            <button type="button" class="btn-add" id="btnAgregarInsumo">+ Agregar otro ingrediente del inventario</button>
+        </div>
+
+        <!-- Bloque B (Separado e Independiente): Guardar la configuración actual en el Recetario para reutilizar en el futuro -->
+        <div class="sub-panel" style="background:#19231b;border:1px dashed #27ae60;margin-top:12px;">
+            <h3 style="color:#2ecc71;margin-bottom:6px;">💾 ¿Armaste un menú nuevo hoy y quieres guardarlo en el Recetario para otros días?</h3>
+            <p style="color:#aaa;font-size:12px;margin:0 0 10px 0;">Este paso es independiente de la producción diaria. Si llenaste arriba la sopa, principio e ingredientes y deseas conservar esta fórmula como plantilla, ponle un nombre y guárdala aquí:</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                <input id="nombreNuevaPlantilla" placeholder="Nombre de la nueva receta (Ej. Viernes Especial del Chef)" style="flex:2;min-width:240px;">
+                <button type="button" class="btn-save-plantilla" id="btnGuardarPlantilla">💾 Guardar Configuración Actual como Receta</button>
+            </div>
+        </div>
+
+        <div class="full-width" style="display:flex;gap:10px;margin-top:14px;">
+            <button type="submit" style="font-size:15px;padding:13px 22px;">🚀 Registrar Producción de Hoy y Descontar Totales del Inventario</button>
+            <button type="button" class="secundario" id="cancelarBtn">Limpiar Formulario</button>
+        </div>
+    </form>
+    <div id="mensaje"></div>
+</section>
+
+<section class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <h2 style="margin:0;">Historial y Disponibilidad en Tiempo Real</h2>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button type="button" id="btnLimpiarAnteriores" style="background:#d35400;padding:9px 14px;font-size:13px;">🧹 Eliminar Menús de Días Anteriores</button>
+            <button type="button" id="btnReiniciarHistorial" style="background:#c0392b;padding:9px 14px;font-size:13px;">🗑️ Reiniciar Todo el Historial</button>
+        </div>
+    </div>
+    <div class="tabla">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Menú Base</th>
+                    <th>Cupos Totales Restantes</th>
+                    <th>Unidades de Proteína Restantes</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="listaMenus"></tbody>
+        </table>
+    </div>
+</section>
+</main>
+
+<script>
+const SUPABASE_URL = "https://cuoyvtybvosxfpthcrbe.supabase.co"; 
+const SUPABASE_KEY = "sb_publishable_X7_VB3rLXgT1U257tuLwtQ_SBNONS1F"; 
+
+// Recetas Gourmet Caseras con TODOS sus ingredientes reales especificados por porción individual (por_cupo)
+const RECETAS_PREDETERMINADAS = [
+    {
+        nombre_plantilla: "⭐ 1. Sancocho Trifásico & Arroz al Coco (Sabores del Pacífico/Valle)",
+        sopa: "Sancochito casero con costilla, pollo, papa, yuca, plátano verde, mazorca y cilantro",
+        entrada: "Arroz cremoso al coco con patacón pisao, ensalada fresca y aguacate",
+        jugo: "Limonada de coco cremosa",
+        postre: "Dulce casero de leche cortada con melao de panela",
+        insumos_sugeridos: [
+            // Sopa: Sancocho completo
+            { componente: "Sopa", nombre_keyword: "papa pastusa", por_cupo: 80 },
+            { componente: "Sopa", nombre_keyword: "yuca", por_cupo: 70 },
+            { componente: "Sopa", nombre_keyword: "plátano verde", por_cupo: 0.35 },
+            { componente: "Sopa", nombre_keyword: "mazorca", por_cupo: 0.5 },
+            { componente: "Sopa", nombre_keyword: "costilla", por_cupo: 50 },
+            { componente: "Sopa", nombre_keyword: "pollo desmechado", por_cupo: 40 },
+            { componente: "Sopa", nombre_keyword: "cebolla", por_cupo: 20 },
+            { componente: "Sopa", nombre_keyword: "cilantro", por_cupo: 8 },
+            // Entrada / Seco
+            { componente: "Entrada / Principio", nombre_keyword: "arroz", por_cupo: 90 },
+            { componente: "Entrada / Principio", nombre_keyword: "leche de coco", por_cupo: 50 },
+            { componente: "Entrada / Principio", nombre_keyword: "plátano verde", por_cupo: 0.5 },
+            { componente: "Entrada / Principio", nombre_keyword: "lechuga", por_cupo: 30 },
+            { componente: "Entrada / Principio", nombre_keyword: "tomate", por_cupo: 35 },
+            { componente: "Entrada / Principio", nombre_keyword: "aguacate", por_cupo: 0.25 },
+            // Jugo
+            { componente: "Jugo", nombre_keyword: "limón", por_cupo: 30 },
+            { componente: "Jugo", nombre_keyword: "leche de coco", por_cupo: 40 },
+            // Postre
+            { componente: "Postre", nombre_keyword: "leche entera", por_cupo: 60 },
+            { componente: "Postre", nombre_keyword: "panela", por_cupo: 25 }
+        ]
+    },
+    {
+        nombre_plantilla: "⭐ 2. Tradición Antioqueña & Ajiaco Santafereño",
+        sopa: "Ajiaco santafereño con tres papas, pollo desmechado, mazorca, guascas y crema de leche",
+        entrada: "Frijoles cargamanto estofados con tocineta ahumada, arroz blanco, maduro y aguacate",
+        jugo: "Jugo natural de maracuyá y mango",
+        postre: "Arroz con leche cremoso al coco y canela",
+        insumos_sugeridos: [
+            // Sopa: Ajiaco completo
+            { componente: "Sopa", nombre_keyword: "papa pastusa", por_cupo: 90 },
+            { componente: "Sopa", nombre_keyword: "papa criolla", por_cupo: 60 },
+            { componente: "Sopa", nombre_keyword: "pollo desmechado", por_cupo: 45 },
+            { componente: "Sopa", nombre_keyword: "mazorca", por_cupo: 0.5 },
+            { componente: "Sopa", nombre_keyword: "crema de leche", por_cupo: 25 },
+            { componente: "Sopa", nombre_keyword: "cilantro", por_cupo: 8 },
+            // Entrada / Seco: Frijoles con todo
+            { componente: "Entrada / Principio", nombre_keyword: "frijol", por_cupo: 75 },
+            { componente: "Entrada / Principio", nombre_keyword: "tocineta", por_cupo: 25 },
+            { componente: "Entrada / Principio", nombre_keyword: "arroz", por_cupo: 90 },
+            { componente: "Entrada / Principio", nombre_keyword: "plátano maduro", por_cupo: 0.5 },
+            { componente: "Entrada / Principio", nombre_keyword: "zanahoria", por_cupo: 20 },
+            { componente: "Entrada / Principio", nombre_keyword: "aguacate", por_cupo: 0.25 },
+            // Jugo
+            { componente: "Jugo", nombre_keyword: "maracuyá", por_cupo: 35 },
+            { componente: "Jugo", nombre_keyword: "mango", por_cupo: 35 },
+            // Postre
+            { componente: "Postre", nombre_keyword: "arroz", por_cupo: 25 },
+            { componente: "Postre", nombre_keyword: "leche entera", por_cupo: 70 },
+            { componente: "Postre", nombre_keyword: "leche de coco", por_cupo: 25 }
+        ]
+    },
+    {
+        nombre_plantilla: "⭐ 3. Mediterráneo de la Casa (Pasta al Pesto & Tomates Asados)",
+        sopa: "Crema rústica de tomates chontos asados con albahaca fresca, cebolla y toque de crema",
+        entrada: "Pasta corta al pesto cremoso con queso campesino, arroz blanco y ensalada fresca",
+        jugo: "Limonada frappé de frutos rojos",
+        postre: "Cuajada asada en horno con melao de panela",
+        insumos_sugeridos: [
+            // Sopa
+            { componente: "Sopa", nombre_keyword: "tomate", por_cupo: 120 },
+            { componente: "Sopa", nombre_keyword: "cebolla", por_cupo: 25 },
+            { componente: "Sopa", nombre_keyword: "zanahoria", por_cupo: 20 },
+            { componente: "Sopa", nombre_keyword: "crema de leche", por_cupo: 25 },
+            { componente: "Sopa", nombre_keyword: "albahaca", por_cupo: 6 },
+            // Entrada / Principio
+            { componente: "Entrada / Principio", nombre_keyword: "pasta", por_cupo: 85 },
+            { componente: "Entrada / Principio", nombre_keyword: "albahaca", por_cupo: 12 },
+            { componente: "Entrada / Principio", nombre_keyword: "crema de leche", por_cupo: 30 },
+            { componente: "Entrada / Principio", nombre_keyword: "queso", por_cupo: 25 },
+            { componente: "Entrada / Principio", nombre_keyword: "arroz", por_cupo: 70 },
+            { componente: "Entrada / Principio", nombre_keyword: "lechuga", por_cupo: 30 },
+            // Jugo
+            { componente: "Jugo", nombre_keyword: "frutos rojos", por_cupo: 50 },
+            { componente: "Jugo", nombre_keyword: "limón", por_cupo: 20 },
+            // Postre
+            { componente: "Postre", nombre_keyword: "queso", por_cupo: 45 },
+            { componente: "Postre", nombre_keyword: "panela", por_cupo: 25 }
+        ]
+    },
+    {
+        nombre_plantilla: "⭐ 4. Campestre de la Montaña (Lentejas con Chorizo & Crema de Ahuyama)",
+        sopa: "Crema de ahuyama y zanahoria asada con papa criolla y crema de leche",
+        entrada: "Lentejas estofadas con chorizo artesanal picado, arroz blanco, maduro y aguacate",
+        jugo: "Jugo de lulo fresco",
+        postre: "Postre cremoso de mora silvestre con leche",
+        insumos_sugeridos: [
+            // Sopa
+            { componente: "Sopa", nombre_keyword: "ahuyama", por_cupo: 110 },
+            { componente: "Sopa", nombre_keyword: "zanahoria", por_cupo: 30 },
+            { componente: "Sopa", nombre_keyword: "papa criolla", por_cupo: 40 },
+            { componente: "Sopa", nombre_keyword: "cebolla", por_cupo: 20 },
+            { componente: "Sopa", nombre_keyword: "crema de leche", por_cupo: 20 },
+            // Entrada / Principio
+            { componente: "Entrada / Principio", nombre_keyword: "lenteja", por_cupo: 75 },
+            { componente: "Entrada / Principio", nombre_keyword: "chorizo", por_cupo: 0.5 },
+            { componente: "Entrada / Principio", nombre_keyword: "arroz", por_cupo: 90 },
+            { componente: "Entrada / Principio", nombre_keyword: "plátano maduro", por_cupo: 0.5 },
+            { componente: "Entrada / Principio", nombre_keyword: "tomate", por_cupo: 30 },
+            { componente: "Entrada / Principio", nombre_keyword: "aguacate", por_cupo: 0.25 },
+            // Jugo
+            { componente: "Jugo", nombre_keyword: "lulo", por_cupo: 60 },
+            // Postre
+            { componente: "Postre", nombre_keyword: "mora", por_cupo: 35 },
+            { componente: "Postre", nombre_keyword: "leche entera", por_cupo: 50 },
+            { componente: "Postre", nombre_keyword: "crema de leche", por_cupo: 20 }
+        ]
+    },
+    {
+        nombre_plantilla: "⭐ 5. Huerto & Parrilla Búfalo (Sopa Campesina & Papas Rústicas)",
+        sopa: "Sopa campesina de verduras de la huerta con papa pastusa, criolla, yuca, zanahoria y maíz",
+        entrada: "Papas criollas y pastusas rústicas con tocineta, arroz blanco y ensalada de la casa",
+        jugo: "Jugo de mora silvestre",
+        postre: "Cuajada fresca con dulce de frutos rojos",
+        insumos_sugeridos: [
+            // Sopa
+            { componente: "Sopa", nombre_keyword: "papa pastusa", por_cupo: 60 },
+            { componente: "Sopa", nombre_keyword: "papa criolla", por_cupo: 50 },
+            { componente: "Sopa", nombre_keyword: "zanahoria", por_cupo: 35 },
+            { componente: "Sopa", nombre_keyword: "yuca", por_cupo: 40 },
+            { componente: "Sopa", nombre_keyword: "mazorca", por_cupo: 0.4 },
+            { componente: "Sopa", nombre_keyword: "cilantro", por_cupo: 8 },
+            // Entrada / Principio
+            { componente: "Entrada / Principio", nombre_keyword: "papa criolla", por_cupo: 90 },
+            { componente: "Entrada / Principio", nombre_keyword: "tocineta", por_cupo: 20 },
+            { componente: "Entrada / Principio", nombre_keyword: "arroz", por_cupo: 85 },
+            { componente: "Entrada / Principio", nombre_keyword: "lechuga", por_cupo: 35 },
+            { componente: "Entrada / Principio", nombre_keyword: "tomate", por_cupo: 35 },
+            { componente: "Entrada / Principio", nombre_keyword: "aguacate", por_cupo: 0.25 },
+            // Jugo
+            { componente: "Jugo", nombre_keyword: "mora", por_cupo: 60 },
+            // Postre
+            { componente: "Postre", nombre_keyword: "queso", por_cupo: 45 },
+            { componente: "Postre", nombre_keyword: "frutos rojos", por_cupo: 30 }
+        ]
+    }
+];
+
+let menusDia = [];
+let inventarioCache = [];
+let plantillasGuardadas = [];
+const $ = id => document.getElementById(id);
+
+function mostrarMensaje(texto, esError = false) {
+    const msg = $('mensaje');
+    msg.textContent = texto;
+    msg.className = esError ? 'error' : 'exito';
+}
+
+$('fecha').valueAsDate = new Date();
+
+function obtenerCuposActuales() {
+    const val = parseInt($('cupos_disponibles').value, 10);
+    return (isNaN(val) || val < 1) ? 1 : val;
+}
+
+// Función que recalcula todas las filas de insumos multiplicando (por_cupo * cupos_disponibles)
+function recalcularCantidadesPorCupos() {
+    const cupos = obtenerCuposActuales();
+    $('lblCuposActivos').textContent = cupos;
+
+    const filas = document.querySelectorAll('.insumo-row');
+    filas.forEach(fila => {
+        const inputPorCupo = fila.querySelector('.insumo-por-cupo');
+        const inputTotal = fila.querySelector('.insumo-cantidad');
+        const porCupo = parseFloat(inputPorCupo.value);
+        if (!isNaN(porCupo) && porCupo > 0) {
+            const calculado = Math.round((porCupo * cupos) * 100) / 100;
+            inputTotal.value = calculado;
+        }
+    });
+}
+
+// Escuchar cambios en los cupos producidos para actualizar las cantidades en tiempo real
+$('cupos_disponibles').addEventListener('input', recalcularCantidadesPorCupos);
+$('btnRecalcular').addEventListener('click', recalcularCantidadesPorCupos);
+
+async function cargarInventario() {
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/rest/v1/ingredientes?select=*&order=nombre.asc`, {
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+        if (res.ok) {
+            inventarioCache = await res.json();
+            if ($('contenedorInsumos').children.length === 0) {
+                agregarFilaInsumo();
+            }
+        }
+    } catch (e) {
+        console.error("Error cargando inventario:", e);
+    }
+}
+
+async function cargarPlantillas() {
+    const select = $('selectorPlantilla');
+    select.innerHTML = '<option value="">-- Seleccionar una receta gourmet casera o guardada --</option>';
+
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/rest/v1/plantillas_menu_dia?select=*&order=id.desc`, {
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+        if (res.ok) {
+            plantillasGuardadas = await res.json();
+        }
+    } catch (e) {
+        console.warn("Usando recetario local predeterminado.");
+    }
+
+    const grpPred = document.createElement('optgroup');
+    grpPred.label = "👨‍🍳 Recetario Gourmet Casero Completo (Escalado Automático)";
+    RECETAS_PREDETERMINADAS.forEach((r, idx) => {
+        const opt = document.createElement('option');
+        opt.value = `pred_${idx}`;
+        opt.textContent = `${r.nombre_plantilla}`;
+        grpPred.append(opt);
+    });
+    select.append(grpPred);
+
+    if (Array.isArray(plantillasGuardadas) && plantillasGuardadas.length > 0) {
+        const grpUsr = document.createElement('optgroup');
+        grpUsr.label = "📌 Mis Recetas Guardadas en Base de Datos";
+        plantillasGuardadas.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = `db_${p.id}`;
+            opt.textContent = `📌 ${p.nombre_plantilla} (${p.sopa} + ${p.entrada})`;
+            grpUsr.append(opt);
+        });
+        select.append(grpUsr);
+    }
+}
+
+function agregarFilaInsumo(compDef = 'Sopa', ingIdDef = '', porCupoDef = '', cantTotalDef = '') {
+    const cupos = obtenerCuposActuales();
+    const div = document.createElement('div');
+    div.className = 'insumo-row';
+
+    // 1. Componente del menú
+    const grpComp = document.createElement('div');
+    grpComp.className = 'field-group';
+    grpComp.style.maxWidth = '175px';
+    grpComp.innerHTML = '<small>Componente del Menú</small>';
+    const selectComp = document.createElement('select');
+    selectComp.className = 'insumo-componente';
+    ['Sopa', 'Entrada / Principio', 'Jugo', 'Postre', 'Proteínas'].forEach(c => {
+        const o = document.createElement('option');
+        o.value = c;
+        o.textContent = c;
+        if (c === compDef) o.selected = true;
+        selectComp.append(o);
+    });
+    grpComp.append(selectComp);
+
+    // 2. Ingrediente del inventario
+    const grpIng = document.createElement('div');
+    grpIng.className = 'field-group';
+    grpIng.style.flex = '2';
+    grpIng.innerHTML = '<small>Ingrediente (Inventario Actual)</small>';
+    const selectIng = document.createElement('select');
+    selectIng.className = 'insumo-id';
+    selectIng.required = true;
+    selectIng.innerHTML = '<option value="">Seleccione ingrediente del inventario...</option>';
+    inventarioCache.forEach(ing => {
+        const o = document.createElement('option');
+        o.value = ing.id;
+        o.textContent = `${ing.nombre} (Disp: ${ing.stock_actual} ${ing.unidad_medida})`;
+        if (String(ing.id) === String(ingIdDef)) o.selected = true;
+        selectIng.append(o);
+    });
+    grpIng.append(selectIng);
+
+    // Si el usuario selecciona un ingrediente que ya está puesto en otra fila del mismo componente, fusionarlos automáticamente
+    function verificarFusionFilas() {
+        const idElegido = selectIng.value;
+        const compElegido = selectComp.value;
+        if (!idElegido) return;
+
+        const todasLasFilas = Array.from(document.querySelectorAll('.insumo-row'));
+        const filaPrevia = todasLasFilas.find(f => 
+            f !== div && 
+            f.querySelector('.insumo-id').value === idElegido &&
+            f.querySelector('.insumo-componente').value === compElegido
+        );
+
+        if (filaPrevia) {
+            const inputPorCupoPrev = filaPrevia.querySelector('.insumo-por-cupo');
+            const inputCantPrev = filaPrevia.querySelector('.insumo-cantidad');
+            
+            const pcActual = parseFloat(inputPorCupo.value) || 0;
+            const cantActual = parseFloat(inputCant.value) || 0;
+            
+            const pcPrev = parseFloat(inputPorCupoPrev.value) || 0;
+            const cantPrev = parseFloat(inputCantPrev.value) || 0;
+
+            if (pcActual > 0 || cantActual > 0) {
+                inputPorCupoPrev.value = Math.round((pcPrev + pcActual) * 1000) / 1000;
+                inputCantPrev.value = Math.round((cantPrev + cantActual) * 100) / 100;
+                mostrarMensaje('🔄 Ese ingrediente ya estaba en la lista de ' + compElegido + '. Se sumó la cantidad a la fila existente para no duplicarlo.');
+            } else {
+                mostrarMensaje('ℹ️ Ese ingrediente ya está en la lista de ' + compElegido + '. Se enfocó la fila existente para que sumes o edites su cantidad.');
+            }
+            div.remove();
+            inputCantPrev.focus();
+        }
+    }
+
+    selectIng.addEventListener('change', verificarFusionFilas);
+    selectComp.addEventListener('change', verificarFusionFilas);
+
+    // 3. Cantidad por 1 almuerzo (Por cupo)
+    const grpPorCupo = document.createElement('div');
+    grpPorCupo.className = 'field-group';
+    grpPorCupo.style.maxWidth = '155px';
+    grpPorCupo.innerHTML = '<small>Medida x 1 Almuerzo</small>';
+    const inputPorCupo = document.createElement('input');
+    inputPorCupo.type = 'number';
+    inputPorCupo.step = 'any';
+    inputPorCupo.min = '0';
+    inputPorCupo.placeholder = 'Ej. 80';
+    inputPorCupo.className = 'insumo-por-cupo';
+    inputPorCupo.value = porCupoDef;
+    grpPorCupo.append(inputPorCupo);
+
+    // 4. Cantidad Total a descontar (PorCupo * Cupos)
+    const grpTotal = document.createElement('div');
+    grpTotal.className = 'field-group';
+    grpTotal.style.maxWidth = '175px';
+    grpTotal.innerHTML = '<small style="color:#f39c12;font-weight:bold">Total Lote a Descontar</small>';
+    const inputCant = document.createElement('input');
+    inputCant.type = 'number';
+    inputCant.step = 'any';
+    inputCant.min = '0.01';
+    inputCant.placeholder = 'Total gastado';
+    inputCant.className = 'insumo-cantidad';
+    inputCant.style.borderColor = '#d2691e';
+    inputCant.style.fontWeight = 'bold';
+    
+    if (cantTotalDef !== '') {
+        inputCant.value = cantTotalDef;
+    } else if (porCupoDef !== '' && !isNaN(parseFloat(porCupoDef))) {
+        inputCant.value = Math.round((parseFloat(porCupoDef) * cupos) * 100) / 100;
+    }
+    inputCant.required = true;
+    grpTotal.append(inputCant);
+
+    // Eventos de sincronización entre "Medida x 1 Almuerzo" y "Total Lote"
+    inputPorCupo.addEventListener('input', () => {
+        const pc = parseFloat(inputPorCupo.value);
+        if (!isNaN(pc) && pc >= 0) {
+            inputCant.value = Math.round((pc * obtenerCuposActuales()) * 100) / 100;
+        }
+    });
+
+    inputCant.addEventListener('input', () => {
+        const tot = parseFloat(inputCant.value);
+        const c = obtenerCuposActuales();
+        if (!isNaN(tot) && c > 0) {
+            inputPorCupo.value = Math.round((tot / c) * 1000) / 1000;
+        }
+    });
+
+    const btnDel = document.createElement('button');
+    btnDel.type = 'button';
+    btnDel.className = 'btn-remove';
+    btnDel.textContent = '✕';
+    btnDel.onclick = () => div.remove();
+
+    div.append(grpComp, grpIng, grpPorCupo, grpTotal, btnDel);
+    $('contenedorInsumos').append(div);
+}
+
+$('btnAgregarInsumo').onclick = () => agregarFilaInsumo();
+
+// Al elegir una receta del desplegable, rellenar todos los ingredientes escalados según los cupos actuales
+$('selectorPlantilla').addEventListener('change', (e) => {
+    const val = e.target.value;
+    if (!val) return;
+
+    let plantilla = null;
+    if (val.startsWith('pred_')) {
+        const idx = parseInt(val.replace('pred_', ''), 10);
+        plantilla = RECETAS_PREDETERMINADAS[idx];
+    } else if (val.startsWith('db_')) {
+        const id = parseInt(val.replace('db_', ''), 10);
+        plantilla = plantillasGuardadas.find(p => Number(p.id) === id);
+    }
+
+    if (!plantilla) return;
+
+    $('sopa').value = plantilla.sopa || '';
+    $('entrada').value = plantilla.entrada || '';
+    $('jugo').value = plantilla.jugo || '';
+    $('postre').value = plantilla.postre || '';
+
+    $('contenedorInsumos').replaceChildren();
+    const cupos = obtenerCuposActuales();
+    $('lblCuposActivos').textContent = cupos;
+
+    if (Array.isArray(plantilla.insumos_base) && plantilla.insumos_base.length > 0) {
+        plantilla.insumos_base.forEach(item => {
+            const pc = item.por_cupo ?? (item.cantidad ? (item.cantidad / 40) : 0);
+            const totalEscala = Math.round((pc * cupos) * 100) / 100;
+            agregarFilaInsumo(item.componente, item.ingrediente_id, pc, totalEscala);
+        });
+    } else if (Array.isArray(plantilla.insumos_sugeridos)) {
+        let agregados = 0;
+        plantilla.insumos_sugeridos.forEach(sug => {
+            const match = inventarioCache.find(i => i.nombre.toLowerCase().includes(sug.nombre_keyword.toLowerCase()));
+            if (match) {
+                const totalEscala = Math.round((sug.por_cupo * cupos) * 100) / 100;
+                agregarFilaInsumo(sug.componente, match.id, sug.por_cupo, totalEscala);
+                agregados++;
+            }
+        });
+        if (agregados === 0) agregarFilaInsumo();
+    } else {
+        agregarFilaInsumo();
+    }
+
+    mostrarMensaje(`✨ Receta "${plantilla.nombre_plantilla}" cargada y calculada automáticamente para ${cupos} cupos.`);
+});
+
+// Guardar plantilla con su proporción por cupo
+$('btnGuardarPlantilla').addEventListener('click', async () => {
+    const nombre = $('nombreNuevaPlantilla').value.trim();
+    const sopa = $('sopa').value.trim();
+    const entrada = $('entrada').value.trim();
+    const jugo = $('jugo').value.trim();
+    const postre = $('postre').value.trim();
+
+    if (!nombre || !sopa || !entrada) {
+        mostrarMensaje('⚠️ Escribe un nombre para la plantilla y completa al menos Sopa y Entrada antes de guardarla.', true);
+        return;
+    }
+
+    const cupos = obtenerCuposActuales();
+    const filas = Array.from(document.querySelectorAll('.insumo-row'));
+    const insumosBase = [];
+    for (const fila of filas) {
+        const comp = fila.querySelector('.insumo-componente').value;
+        const ingId = parseInt(fila.querySelector('.insumo-id').value, 10);
+        const cant = parseFloat(fila.querySelector('.insumo-cantidad').value);
+        let porCupo = parseFloat(fila.querySelector('.insumo-por-cupo').value);
+        if (isNaN(porCupo) && cant > 0) {
+            porCupo = Math.round((cant / cupos) * 1000) / 1000;
+        }
+        if (ingId && cant > 0) {
+            insumosBase.push({ componente: comp, ingrediente_id: ingId, por_cupo: porCupo, cantidad: cant });
+        }
+    }
+
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/rest/v1/plantillas_menu_dia`, {
+            method: 'POST',
+            headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({
+                nombre_plantilla: nombre,
+                sopa,
+                entrada,
+                jugo,
+                postre,
+                insumos_base: insumosBase
+            })
+        });
+
+        if (!res.ok) throw new Error(await res.text());
+
+        $('nombreNuevaPlantilla').value = '';
+        await cargarPlantillas();
+        mostrarMensaje(`💾 ¡Receta "${nombre}" guardada con sus proporciones por cupo en el recetario!`);
+    } catch (err) {
+        mostrarMensaje('Error al guardar en el recetario: ' + err.message, true);
+    }
+});
+
+function render() {
+    const tbody = $('listaMenus');
+    tbody.replaceChildren();
+
+    if (menusDia.length === 0) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 5;
+        td.textContent = 'No hay menús del día registrados.';
+        td.style.textAlign = 'center';
+        tr.append(td);
+        tbody.append(tr);
+        return;
+    }
+
+    menusDia.forEach(m => {
+        const tr = document.createElement('tr');
+        
+        const tdFecha = document.createElement('td');
+        tdFecha.textContent = m.fecha;
+
+        const tdBase = document.createElement('td');
+        tdBase.innerHTML = `<strong>Sopa:</strong> ${m.sopa}<br><strong>Entrada:</strong> ${m.entrada}<br><small style="color:#aaa">Jugo: ${m.jugo} · Postre: ${m.postre}</small>`;
+
+        const tdCupos = document.createElement('td');
+        const cupos = m.cupos_disponibles ?? 0;
+        tdCupos.className = cupos > 0 ? 'cupo-ok' : 'cupo-agotado';
+        tdCupos.textContent = cupos > 0 ? `${cupos} almuerzos disponibles` : 'AGOTADO (0)';
+
+        const tdProt = document.createElement('td');
+        const prots = [
+            `Pollo: ${m.stock_pollo ?? 0}`,
+            `Cerdo: ${m.stock_cerdo ?? 0}`,
+            `Churrasquito: ${m.stock_churrasquito ?? 0}`,
+            `Trucha: ${m.stock_trucha ?? 0}`,
+            `Ceviche: ${m.stock_ceviche ?? 0}`,
+            `Salmón: ${m.stock_salmon ?? 0}`
+        ];
+        prots.forEach(p => {
+            const span = document.createElement('span');
+            span.className = 'badge';
+            span.textContent = p;
+            tdProt.append(span);
+        });
+
+        const tdAccion = document.createElement('td');
+        const btnBorrarFila = document.createElement('button');
+        btnBorrarFila.type = 'button';
+        btnBorrarFila.className = 'btn-remove';
+        btnBorrarFila.textContent = '🗑️';
+        btnBorrarFila.title = 'Eliminar este menú';
+        btnBorrarFila.onclick = () => eliminarMenuIndividual(m.id);
+        tdAccion.append(btnBorrarFila);
+
+        tr.append(tdFecha, tdBase, tdCupos, tdProt, tdAccion);
+        tbody.append(tr);
+    });
+}
+
+async function cargarMenus() {
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/rest/v1/menu_dia?select=*&order=id.desc`, {
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+        if (!res.ok) throw new Error('Error al conectar con menu_dia');
+        menusDia = await res.json();
+        render();
+    } catch (e) {
+        mostrarMensaje('Error cargando menús: ' + e.message, true);
+    }
+}
+
+$('formulario').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+
+    const filas = Array.from(document.querySelectorAll('.insumo-row'));
+    const insumosUsados = [];
+
+    for (const fila of filas) {
+        const comp = fila.querySelector('.insumo-componente').value;
+        const ingId = parseInt(fila.querySelector('.insumo-id').value, 10);
+        const porCupo = parseFloat(fila.querySelector('.insumo-por-cupo').value) || 0;
+        const cant = parseFloat(fila.querySelector('.insumo-cantidad').value);
+        if (ingId && cant > 0) {
+            insumosUsados.push({ componente: comp, ingrediente_id: ingId, por_cupo: porCupo, cantidad: cant });
+        }
+    }
+
+    const nuevoMenu = {
+        fecha: $('fecha').value,
+        sopa: $('sopa').value.trim(),
+        entrada: $('entrada').value.trim(),
+        jugo: $('jugo').value.trim(),
+        postre: $('postre').value.trim(),
+        precio: 22000,
+        cupos_disponibles: obtenerCuposActuales(),
+        stock_pollo: parseInt($('stock_pollo').value, 10),
+        stock_cerdo: parseInt($('stock_cerdo').value, 10),
+        stock_churrasquito: parseInt($('stock_churrasquito').value, 10),
+        stock_trucha: parseInt($('stock_trucha').value, 10),
+        stock_ceviche: parseInt($('stock_ceviche').value, 10),
+        stock_salmon: parseInt($('stock_salmon').value, 10),
+        insumos_usados: insumosUsados
+    };
+
+    try {
+        const res = await fetch(`${baseUrl}/rest/v1/menu_dia`, {
+            method: 'POST',
+            headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(nuevoMenu)
+        });
+        
+        if (!res.ok) throw new Error(await res.text());
+
+        // Agrupar descuentos si un mismo ingrediente se usó en varios componentes (ej. plátano verde en sopa y seco)
+        const descuentosPorIngrediente = {};
+        for (const item of insumosUsados) {
+            descuentosPorIngrediente[item.ingrediente_id] = (descuentosPorIngrediente[item.ingrediente_id] || 0) + item.cantidad;
+        }
+
+        for (const [ingIdStr, totalDescontar] of Object.entries(descuentosPorIngrediente)) {
+            const ingId = parseInt(ingIdStr, 10);
+            const ingActual = inventarioCache.find(i => Number(i.id) === ingId);
+            if (ingActual) {
+                const nuevoStock = Math.round((parseFloat(ingActual.stock_actual) - totalDescontar) * 100) / 100;
+                await fetch(`${baseUrl}/rest/v1/ingredientes?id=eq.${ingId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        apikey: SUPABASE_KEY,
+                        Authorization: `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ stock_actual: nuevoStock })
+                });
+                ingActual.stock_actual = nuevoStock;
+            }
+        }
+
+        $('formulario').reset();
+        $('fecha').valueAsDate = new Date();
+        $('cupos_disponibles').value = 40;
+        $('lblCuposActivos').textContent = 40;
+        $('contenedorInsumos').replaceChildren();
+        await cargarInventario();
+        await cargarMenus();
+        mostrarMensaje('¡Menú del día registrado y todos los ingredientes del lote descontados del inventario!');
+    } catch (err) {
+        mostrarMensaje('Error al guardar: ' + err.message, true);
+    }
+});
+
+$('cancelarBtn').onclick = () => {
+    $('formulario').reset();
+    $('fecha').valueAsDate = new Date();
+    $('cupos_disponibles').value = 40;
+    $('lblCuposActivos').textContent = 40;
+    $('selectorPlantilla').value = '';
+    $('contenedorInsumos').replaceChildren();
+    agregarFilaInsumo();
+};
+
+
+async function eliminarMenuIndividual(id) {
+    if (!confirm('¿Seguro que deseas eliminar este registro del Menú del Día?')) return;
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/rest/v1/menu_dia?id=eq.${id}`, {
+            method: 'DELETE',
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+        if (!res.ok) throw new Error(await res.text());
+        await cargarMenus();
+        mostrarMensaje('🗑️ Menú eliminado correctamente.');
+    } catch (e) {
+        mostrarMensaje('Error al eliminar menú: ' + e.message, true);
+    }
+}
+
+$('btnLimpiarAnteriores').onclick = async () => {
+    const hoy = new Date().toISOString().split('T')[0];
+    if (!confirm(`¿Deseas eliminar todos los menús del día anteriores a hoy (${hoy})?`)) return;
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/rest/v1/menu_dia?fecha=lt.${hoy}`, {
+            method: 'DELETE',
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+        if (!res.ok) throw new Error(await res.text());
+        await cargarMenus();
+        mostrarMensaje('🧹 Se han eliminado todos los menús de días anteriores.');
+    } catch (e) {
+        mostrarMensaje('Error al limpiar menús anteriores: ' + e.message, true);
+    }
+};
+
+$('btnReiniciarHistorial').onclick = async () => {
+    if (!confirm('⚠️ ¿Estás seguro de que deseas REINICIAR TODO el historial de Menús del Día? Esta acción dejará la tabla limpia desde cero.')) return;
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        // En PostgREST, id=gt.0 borra todos los registros con id > 0
+        const res = await fetch(`${baseUrl}/rest/v1/menu_dia?id=gt.0`, {
+            method: 'DELETE',
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+        if (!res.ok) throw new Error(await res.text());
+        await cargarMenus();
+        mostrarMensaje('🗑️ Historial de Menús del Día reiniciado por completo.');
+    } catch (e) {
+        mostrarMensaje('Error al reiniciar el historial: ' + e.message, true);
+    }
+};
+
+async function init() {
+    await cargarInventario();
+    await cargarPlantillas();
+    await cargarMenus();
+}
+
+init();
+</script>
+</body>
+</html>

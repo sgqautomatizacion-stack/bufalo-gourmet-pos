@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Búfalo Gourmet - Órdenes y Ventas</title>
+<style>
+:root{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;color:#f4f4f4;background:#1a1a1a}
+body{margin:0}
+header{background:#8b0000;color:white;padding:20px;text-align:center;border-bottom:3px solid #d2691e}
+header .logo-img{max-width:140px;height:auto;display:block;margin:0 auto 10px auto;filter:drop-shadow(0px 4px 8px rgba(0,0,0,0.3))}
+header h1{margin:0;font-size:24px;text-transform:uppercase}
+nav{background:#2a2a2a;padding:10px;text-align:center;border-bottom:1px solid #444}
+nav a{color:#f39c12;text-decoration:none;margin:0 15px;font-weight:bold}
+nav a:hover{text-decoration:underline}
+main{max-width:1100px;margin:25px auto;padding:0 16px}
+.panel{background:#2a2a2a;border-radius:10px;padding:24px;margin-bottom:20px;box-shadow:0 4px 8px rgba(0,0,0,0.4);border-left:5px solid #d2691e}
+form{display:flex;gap:12px;flex-wrap:wrap}
+input,select{padding:11px;border:1px solid #444;border-radius:5px;background:#1a1a1a;color:#fff;flex:1;min-width:220px}
+.full-width{flex:100%}
+button{padding:11px 18px;background:#8b0000;border:0;border-radius:5px;color:white;cursor:pointer;font-weight:bold}
+button:hover{background:#a93226}
+.secundario{background:#555}
+.btn-pdf{background:#2980b9;padding:9px 15px;font-size:13px}
+.btn-pdf:hover{background:#3498db}
+.btn-danger{background:#c0392b;padding:9px 15px;font-size:13px}
+.btn-danger:hover{background:#e74c3c}
+.btn-remove{background:#512d2d;padding:6px 11px;color:#ff8080;font-size:13px}
+.btn-remove:hover{background:#7a3838}
+.tabla{overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin-top:15px}
+th{background:#333;color:#f39c12;text-align:left;padding:12px}
+td{padding:12px;border-bottom:1px solid #444}
+.precio{color:#2ecc71;font-weight:bold}
+.resumen-caja{margin-top:15px;padding:14px;background:#1f1f1f;border-radius:6px;display:flex;justify-content:space-between;align-items:center;border:1px solid #3d3d3d}
+#mensaje{margin-top:12px;font-weight:bold;padding:10px;border-radius:5px;}
+.error{background:#512d2d;color:#ff8080;}
+.exito{background:#2d5135;color:#80ff9f;}
+.print-only{display:none}
+
+/* Estilos exclusivos para impresión / exportación a PDF */
+@media print {
+    :root, body { background:#ffffff !important; color:#000000 !important; }
+    header { background:#ffffff !important; color:#000000 !important; border-bottom:2px solid #8b0000 !important; padding:10px 0 !important; }
+    header .logo-img { filter:none !important; max-width:100px !important; }
+    nav, #panelFormulario, .no-print, .col-accion { display:none !important; }
+    .print-only { display:block !important; font-size:13px; color:#444; margin-top:4px; }
+    main { max-width:100% !important; margin:0 !important; padding:0 !important; }
+    .panel { background:#ffffff !important; box-shadow:none !important; border:none !important; padding:0 !important; }
+    th { background:#f0f0f0 !important; color:#000000 !important; border-bottom:2px solid #333 !important; }
+    td { color:#000000 !important; border-bottom:1px solid #ccc !important; }
+    .precio { color:#000000 !important; }
+    .resumen-caja { background:#f9f9f9 !important; border:1px solid #999 !important; color:#000 !important; }
+}
+</style>
+</head>
+<body>
+<header>
+    <img src="logo.png" alt="Búfalo Gourmet Logo" class="logo-img">
+    <h1>Búfalo Gourmet</h1>
+    <p>Registro de Órdenes y Control de Cupos / Inventario</p>
+    <div class="print-only" id="fechaImpresion"></div>
+</header>
+<nav>
+    <a href="index.html">← Volver al Menú Principal</a>
+</nav>
+
+<main>
+<section class="panel" id="panelFormulario">
+    <h2>Registrar Nueva Orden / Venta</h2>
+    <p style="color:#aaa;font-size:14px;margin-bottom:20px;">Los platos de la carta descuentan ingredientes por receta. El Menú del Día descuenta exactamente 1 vez del cupo diario producido y 1 vez de las unidades de la proteína elegida en el inventario general (<code>ingredientes</code>).</p>
+    
+    <form id="formularioOrden">
+        <select id="plato_id" required>
+            <option value="">Cargando opciones...</option>
+        </select>
+        
+        <div id="proteinaContainer" class="full-width" style="display:none;">
+            <label style="display:block;margin-bottom:5px;color:#f39c12;font-weight:bold;">Seleccione la Proteína (Descuenta cupo del día y unidad en inventario):</label>
+            <select id="proteina_select"></select>
+        </div>
+
+        <input id="cantidad" type="number" min="1" value="1" placeholder="Cantidad" required>
+
+        <div class="full-width" style="display:flex;gap:10px;margin-top:10px;">
+            <button type="submit">Procesar Orden y Descontar Stock</button>
+            <button type="button" class="secundario" id="limpiarBtn">Limpiar</button>
+        </div>
+    </form>
+    <div id="mensaje"></div>
+</section>
+
+<section class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+        <h2 style="margin:0;">Reporte y Detalle de Ventas Recientes</h2>
+        <div class="no-print" style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button type="button" class="btn-pdf" id="btnExportarPDF">📄 Exportar / Imprimir PDF</button>
+            <button type="button" class="btn-danger" id="btnBorrarTodas">🗑️ Borrar Todas las Órdenes</button>
+        </div>
+    </div>
+
+    <div class="tabla">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID Detalle</th>
+                    <th>ID Venta</th>
+                    <th>Plato / Ítem Vendido</th>
+                    <th>Cantidad</th>
+                    <th>Subtotal</th>
+                    <th class="col-accion">Acción</th>
+                </tr>
+            </thead>
+            <tbody id="listaDetalles"></tbody>
+        </table>
+    </div>
+
+    <div class="resumen-caja">
+        <span><strong>Total Órdenes Listadas:</strong> <span id="totalOrdenesCount">0</span></span>
+        <span style="font-size:18px;"><strong>Total Acumulado en Ventas:</strong> <span id="totalVentasSuma" class="precio">$ 0</span></span>
+    </div>
+</section>
+</main>
+
+<script>
+const SUPABASE_URL = "https://cuoyvtybvosxfpthcrbe.supabase.co"; 
+const SUPABASE_KEY = "sb_publishable_X7_VB3rLXgT1U257tuLwtQ_SBNONS1F"; 
+
+const CONFIG_PROTEINAS = [
+    { key: "Pollo", col: "stock_pollo", precio: 22000, label: "Pollo", keywordInv: "porcion pollo" },
+    { key: "Cerdo", col: "stock_cerdo", precio: 22000, label: "Cerdo", keywordInv: "porcion cerdo" },
+    { key: "Churrasquito", col: "stock_churrasquito", precio: 25000, label: "Churrasquito argentino", keywordInv: "porcion churrasquito" },
+    { key: "Trucha", col: "stock_trucha", precio: 25000, label: "Trucha", keywordInv: "porcion trucha" },
+    { key: "Ceviche", col: "stock_ceviche", precio: 25000, label: "Ceviche de chicharrón", keywordInv: "porcion ceviche" },
+    { key: "Salmon", col: "stock_salmon", precio: 30000, label: "Salmón", keywordInv: "porcion salmon" }
+];
+
+const $ = id => document.getElementById(id);
+const moneda = n => new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0}).format(n || 0);
+
+function normalizar(txt) {
+    return (txt || '').toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+function mostrarMensaje(texto, esError = false) {
+    const msg = $('mensaje');
+    msg.textContent = texto;
+    msg.className = esError ? 'error' : 'exito';
+}
+
+async function cargarPlatosYMenuDia() {
+    const select = $('plato_id');
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        
+        const [resPlatos, resMenuDia, resIng] = await Promise.all([
+            fetch(`${baseUrl}/rest/v1/platos?select=*`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }),
+            fetch(`${baseUrl}/rest/v1/menu_dia?select=*&order=id.desc`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }).catch(() => ({ ok: false })),
+            fetch(`${baseUrl}/rest/v1/ingredientes?select=*`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }).catch(() => ({ ok: false }))
+        ]);
+
+        const platos = resPlatos.ok ? await resPlatos.json() : [];
+        const menuDia = (resMenuDia.ok && typeof resMenuDia.json === 'function') ? await resMenuDia.json() : [];
+        const ingredientes = (resIng.ok && typeof resIng.json === 'function') ? await resIng.json() : [];
+
+        select.innerHTML = '<option value="">Seleccione el Plato o Producto...</option>';
+        window.platosCache = platos; 
+        window.menuDiaCache = menuDia;
+        window.ingredientesCache = ingredientes;
+
+        if (platos.length > 0) {
+            const grupoPlatos = document.createElement('optgroup');
+            grupoPlatos.label = "🍔 Platos y Hamburguesas (Carta)";
+            platos.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = "plato_" + p.id;
+                opt.textContent = `${p.nombre} - ${moneda(p.precio)}`;
+                grupoPlatos.append(opt);
+            });
+            select.append(grupoPlatos);
+        }
+
+        if (Array.isArray(menuDia) && menuDia.length > 0) {
+            const grupoMenu = document.createElement('optgroup');
+            grupoMenu.label = "🍲 Menú del Día / Ejecutivo";
+            menuDia.forEach(m => {
+                const cupos = m.cupos_disponibles ?? 0;
+                const opt = document.createElement('option');
+                opt.value = "menudia_" + m.id;
+                if (cupos <= 0) {
+                    opt.disabled = true;
+                    opt.textContent = `❌ [AGOTADO] Menú (${m.fecha}) — Sopa: ${m.sopa} | Entrada: ${m.entrada}`;
+                } else {
+                    opt.textContent = `🟢 [Quedan ${cupos} cupos] (${m.fecha}) — Sopa: ${m.sopa} | Entrada: ${m.entrada} | Jugo: ${m.jugo} | Postre: ${m.postre}`;
+                }
+                grupoMenu.append(opt);
+            });
+            select.append(grupoMenu);
+        }
+    } catch (e) {
+        console.error('Error cargando opciones:', e);
+        select.innerHTML = '<option value="">❌ Error al cargar opciones</option>';
+    }
+}
+
+$('plato_id').addEventListener('change', (e) => {
+    const val = e.target.value;
+    const proteinaContainer = $('proteinaContainer');
+    const protSelect = $('proteina_select');
+
+    if (val.startsWith('menudia_')) {
+        const menuId = parseInt(val.replace('menudia_', ''), 10);
+        const menuObj = (window.menuDiaCache || []).find(m => Number(m.id) === menuId);
+        
+        protSelect.innerHTML = '<option value="">Seleccione proteína disponible...</option>';
+        if (menuObj) {
+            CONFIG_PROTEINAS.forEach(p => {
+                const disponiblesHoy = menuObj[p.col] ?? 0;
+                const ingInv = (window.ingredientesCache || []).find(i => normalizar(i.nombre).includes(p.keywordInv));
+                const stockBodega = ingInv ? ingInv.stock_actual : 'N/A';
+
+                const opt = document.createElement('option');
+                opt.value = p.key;
+                if (disponiblesHoy <= 0 || (ingInv && ingInv.stock_actual <= 0)) {
+                    opt.disabled = true;
+                    opt.textContent = `❌ ${p.label} - ${moneda(p.precio)} (AGOTADO — Hoy: ${disponiblesHoy} | Inv: ${stockBodega})`;
+                } else {
+                    opt.textContent = `✅ ${p.label} - ${moneda(p.precio)} (Disponibles hoy: ${disponiblesHoy} unid. | En Inventario: ${stockBodega})`;
+                }
+                protSelect.append(opt);
+            });
+        }
+        proteinaContainer.style.display = 'block';
+        protSelect.required = true;
+    } else {
+        proteinaContainer.style.display = 'none';
+        protSelect.required = false;
+        protSelect.value = '';
+    }
+});
+
+async function cargarVentasRecientes() {
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/rest/v1/detalle_ventas?select=*,platos(nombre),menu_dia(sopa,fecha)&order=id.desc&limit=50`, {
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+        const detalles = await res.json();
+        const tbody = $('listaDetalles');
+        tbody.replaceChildren();
+        
+        if (!Array.isArray(detalles) || detalles.length === 0) {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = 6;
+            td.textContent = 'No hay ventas registradas.';
+            td.style.textAlign = 'center';
+            tr.append(td);
+            tbody.append(tr);
+            $('totalOrdenesCount').textContent = '0';
+            $('totalVentasSuma').textContent = moneda(0);
+            return;
+        }
+
+        let sumaTotal = 0;
+
+        detalles.forEach(d => {
+            const tr = document.createElement('tr');
+            let nombreMostrar = d.platos?.nombre;
+            if (!nombreMostrar && d.menu_dia_id) {
+                nombreMostrar = `Menú Ejecutivo (${d.proteina_elegida || 'Base'})`;
+            } else if (!nombreMostrar) {
+                nombreMostrar = 'Ítem #' + (d.plato_id || d.menu_dia_id);
+            }
+
+            sumaTotal += parseFloat(d.subtotal || 0);
+
+            [d.id, d.venta_id, nombreMostrar, d.cantidad, moneda(d.subtotal)].forEach((val, idx) => {
+                const td = document.createElement('td');
+                if(idx === 4) td.className = 'precio';
+                td.textContent = val;
+                tr.append(td);
+            });
+
+            const tdAccion = document.createElement('td');
+            tdAccion.className = 'col-accion';
+            const btnDel = document.createElement('button');
+            btnDel.type = 'button';
+            btnDel.className = 'btn-remove';
+            btnDel.textContent = '🗑️';
+            btnDel.title = 'Eliminar este registro de venta';
+            btnDel.onclick = () => eliminarOrdenIndividual(d.id, d.venta_id);
+            tdAccion.append(btnDel);
+            tr.append(tdAccion);
+
+            tbody.append(tr);
+        });
+
+        $('totalOrdenesCount').textContent = detalles.length;
+        $('totalVentasSuma').textContent = moneda(sumaTotal);
+    } catch (e) {
+        console.error('Error cargando detalles de venta:', e);
+    }
+}
+
+async function eliminarOrdenIndividual(detalleId, ventaId) {
+    if (!confirm(`¿Seguro que deseas eliminar la orden #${detalleId}?`)) return;
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/rest/v1/detalle_ventas?id=eq.${detalleId}`, {
+            method: 'DELETE',
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+        if (!res.ok) throw new Error(await res.text());
+
+        if (ventaId) {
+            await fetch(`${baseUrl}/rest/v1/ventas?id=eq.${ventaId}`, {
+                method: 'DELETE',
+                headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+            });
+        }
+
+        await cargarVentasRecientes();
+        mostrarMensaje(`🗑️ Orden #${detalleId} eliminada correctamente.`);
+    } catch (e) {
+        mostrarMensaje('Error al eliminar la orden: ' + e.message, true);
+    }
+}
+
+$('btnBorrarTodas').onclick = async () => {
+    if (!confirm('⚠️ ¿Estás seguro de que deseas BORRAR TODAS las órdenes registradas? Esta acción dejará el historial de ventas en cero.')) return;
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const resDet = await fetch(`${baseUrl}/rest/v1/detalle_ventas?id=gt.0`, {
+            method: 'DELETE',
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+        if (!resDet.ok) throw new Error(await resDet.text());
+
+        await fetch(`${baseUrl}/rest/v1/ventas?id=gt.0`, {
+            method: 'DELETE',
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+
+        await cargarVentasRecientes();
+        mostrarMensaje('🗑️ Historial de órdenes y ventas vaciado por completo.');
+    } catch (e) {
+        mostrarMensaje('Error al vaciar las órdenes: ' + e.message, true);
+    }
+};
+
+$('btnExportarPDF').onclick = () => {
+    const ahora = new Date();
+    $('fechaImpresion').textContent = `Reporte oficial de ventas generado el ${ahora.toLocaleDateString('es-CO')} a las ${ahora.toLocaleTimeString('es-CO')}`;
+    window.print();
+};
+
+let procesandoOrden = false;
+
+$('formularioOrden').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (procesandoOrden) return; // Evita doble clic accidental
+
+    const selectVal = $('plato_id').value;
+    const cantidadVendida = parseInt($('cantidad').value, 10);
+    
+    if (!selectVal) {
+        mostrarMensaje('⚠️ Por favor selecciona un plato válido.', true);
+        return;
+    }
+
+    const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+    let esMenuDia = selectVal.startsWith('menudia_');
+    let itemId = parseInt(selectVal.replace(esMenuDia ? 'menudia_' : 'plato_', ''), 10);
+    let precioUnitario = 0;
+    let nombreItemFinal = "";
+    let menuObj = null;
+    let protConfig = null;
+    let ingProtObj = null;
+
+    if (!esMenuDia) {
+        const platoObj = (window.platosCache || []).find(p => Number(p.id) === itemId);
+        precioUnitario = platoObj ? parseFloat(platoObj.precio || 0) : 0;
+        nombreItemFinal = platoObj ? platoObj.nombre : 'Plato';
+    } else {
+        menuObj = (window.menuDiaCache || []).find(m => Number(m.id) === itemId);
+        const proteinaKey = $('proteina_select').value;
+        protConfig = CONFIG_PROTEINAS.find(p => p.key === proteinaKey);
+
+        if (!menuObj || !protConfig) {
+            mostrarMensaje('⚠️ Por favor seleccione una proteína válida.', true);
+            return;
+        }
+
+        const cuposActuales = menuObj.cupos_disponibles ?? 0;
+        const stockProtActual = menuObj[protConfig.col] ?? 0;
+
+        if (cantidadVendida > cuposActuales) {
+            mostrarMensaje(`⚠️ Solo quedan ${cuposActuales} cupos de Menú del Día en total.`, true);
+            return;
+        }
+        if (cantidadVendida > stockProtActual) {
+            mostrarMensaje(`⚠️ Solo quedan ${stockProtActual} unidades disponibles de ${protConfig.label} hoy.`, true);
+            return;
+        }
+
+        ingProtObj = (window.ingredientesCache || []).find(i => normalizar(i.nombre).includes(protConfig.keywordInv));
+        if (ingProtObj && Number(ingProtObj.stock_actual) < cantidadVendida) {
+            mostrarMensaje(`⚠️ En el inventario general solo quedan ${ingProtObj.stock_actual} unidades de ${ingProtObj.nombre}.`, true);
+            return;
+        }
+
+        precioUnitario = protConfig.precio;
+        nombreItemFinal = `Menú Ejecutivo (${protConfig.label})`;
+    }
+
+    const subtotal = precioUnitario * cantidadVendida;
+    procesandoOrden = true;
+
+    try {
+        // 1. Crear cabecera en 'ventas'
+        const resVenta = await fetch(`${baseUrl}/rest/v1/ventas`, {
+            method: 'POST',
+            headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify({ total: subtotal, estado: 'Completado' })
+        });
+
+        if (!resVenta.ok) throw new Error('Error al registrar cabecera: ' + await resVenta.text());
+        const ventaCreada = await resVenta.json();
+        const ventaId = ventaCreada[0].id;
+
+        // 2. Insertar en 'detalle_ventas' (El Trigger en BD solo descuenta si plato_id IS NOT NULL)
+        const payloadDetalle = {
+            venta_id: Number(ventaId),
+            plato_id: esMenuDia ? null : Number(itemId),
+            menu_dia_id: esMenuDia ? Number(itemId) : null,
+            proteina_elegida: esMenuDia ? protConfig.label : null,
+            cantidad: Number(cantidadVendida),
+            precio_unitario: Number(precioUnitario),
+            subtotal: Number(subtotal)
+        };
+
+        const resDetalle = await fetch(`${baseUrl}/rest/v1/detalle_ventas`, {
+            method: 'POST',
+            headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(payloadDetalle)
+        });
+
+        if (!resDetalle.ok) throw new Error('Error al registrar detalle: ' + await resDetalle.text());
+
+        // 3. Si es Menú del Día: descontar exactamente 1 vez en 'menu_dia' y exactamente 1 vez en 'ingredientes'
+        if (esMenuDia && menuObj && protConfig) {
+            const patchMenu = {
+                cupos_disponibles: (menuObj.cupos_disponibles ?? 0) - cantidadVendida,
+                [protConfig.col]: (menuObj[protConfig.col] ?? 0) - cantidadVendida
+            };
+
+            await fetch(`${baseUrl}/rest/v1/menu_dia?id=eq.${itemId}`, {
+                method: 'PATCH',
+                headers: {
+                    apikey: SUPABASE_KEY,
+                    Authorization: `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(patchMenu)
+            });
+
+            if (ingProtObj) {
+                const nuevoStockProt = Number(ingProtObj.stock_actual) - cantidadVendida;
+                await fetch(`${baseUrl}/rest/v1/ingredientes?id=eq.${ingProtObj.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        apikey: SUPABASE_KEY,
+                        Authorization: `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ stock_actual: nuevoStockProt })
+                });
+            }
+        }
+
+        $('formularioOrden').reset();
+        $('cantidad').value = 1;
+        $('proteinaContainer').style.display = 'none';
+        await cargarPlatosYMenuDia();
+        await cargarVentasRecientes();
+        mostrarMensaje(`✅ ¡Orden procesada (${nombreItemFinal})! Se descontó exactamente ${cantidadVendida} cupo del día y ${cantidadVendida} unid. de proteína en el inventario.`);
+    } catch (err) {
+        mostrarMensaje('Error: ' + err.message, true);
+    } finally {
+        procesandoOrden = false;
+    }
+});
+
+$('limpiarBtn').onclick = () => {
+    $('formularioOrden').reset();
+    $('cantidad').value = 1;
+    $('proteinaContainer').style.display = 'none';
+};
+
+cargarPlatosYMenuDia();
+cargarVentasRecientes();
+</script>
+</body>
+</html>

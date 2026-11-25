@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Búfalo GOURMET - Personal y Turnos</title>
+<style>
+:root{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;color:#f4f4f4;background:#1a1a1a}
+body{margin:0}
+header{background:#8b0000;color:white;padding:20px;text-align:center;border-bottom:3px solid #d2691e}
+header h1{margin:0;font-size:24px;text-transform:uppercase}
+nav{background:#2a2a2a;padding:10px;text-align:center;border-bottom:1px solid #444}
+nav a{color:#f39c12;text-decoration:none;margin:0 15px;font-weight:bold}
+nav a:hover{text-decoration:underline}
+main{max-width:1100px;margin:25px auto;padding:0 16px}
+.panel{background:#2a2a2a;border-radius:10px;padding:24px;margin-bottom:20px;box-shadow:0 4px 8px rgba(0,0,0,0.4);border-left:5px solid #d2691e}
+form{display:flex;gap:10px;flex-wrap:wrap}
+input,select{padding:11px;border:1px solid #444;border-radius:5px;background:#1a1a1a;color:#fff;flex:1;min-width:160px}
+button{padding:10px 16px;background:#8b0000;border:0;border-radius:5px;color:white;cursor:pointer;font-weight:bold}
+button:hover{background:#a93226}
+.secundario{background:#555}
+.tabla{overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin-top:15px}
+th{background:#333;color:#f39c12;text-align:left;padding:12px}
+td{padding:12px;border-bottom:1px solid #444}
+#mensaje{margin-top:10px;font-weight:bold;padding:8px;border-radius:4px;}
+.error{background:#512d2d;color:#ff8080;}
+.exito{background:#2d5135;color:#80ff9f;}
+</style>
+</head>
+<body>
+<header>
+    <img src="logo.png" alt="Búfalo Gourmet Logo" class="logo-img">
+    <h1>Búfalo GOURMET</h1>
+    <p>Gestión de Personal y Asignación de Turnos</p>
+</header>
+<nav>
+    <a href="index.html">← Volver al Menú Principal</a>
+</nav>
+
+<main>
+<section class="panel">
+    <h2>Asignar Turno a Empleado</h2>
+    <form id="formulario">
+        <select id="empleado_id" required>
+            <option value="">Cargando empleados...</option>
+        </select>
+        <input id="fecha" type="date" required>
+        <input id="hora_inicio" type="time" required>
+        <input id="hora_fin" type="time" required>
+        <button type="submit">Guardar Turno</button>
+        <button type="button" class="secundario" id="cancelarBtn">Limpiar</button>
+    </form>
+    <div id="mensaje"></div>
+</section>
+
+<section class="panel">
+    <h2>Programación de Turnos (Supabase)</h2>
+    <div class="tabla">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID Turno</th>
+                    <th>Empleado</th>
+                    <th>Fecha</th>
+                    <th>Hora Inicio</th>
+                    <th>Hora Fin</th>
+                </tr>
+            </thead>
+            <tbody id="listaTurnos"></tbody>
+        </table>
+    </div>
+</section>
+</main>
+
+<script>
+// CONFIGURACIÓN DE SUPABASE (Asegúrate de poner tus credenciales reales)
+const SUPABASE_URL = "https://cuoyvtybvosxfpthcrbe.supabase.co"; 
+const SUPABASE_KEY = "sb_publishable_X7_VB3rLXgT1U257tuLwtQ_SBNONS1F"; 
+
+let turnos = [];
+let empleadosMap = {};
+const $ = id => document.getElementById(id);
+
+function mostrarMensaje(texto, esError = false) {
+    const msg = $('mensaje');
+    msg.textContent = texto;
+    msg.className = esError ? 'error' : 'exito';
+}
+
+async function cargarEmpleadosSelect() {
+    const select = $('empleado_id');
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/rest/v1/empleados?select=id,nombre,cargo&order=nombre.asc`, {
+            headers: { 
+                apikey: SUPABASE_KEY, 
+                Authorization: `Bearer ${SUPABASE_KEY}` 
+            }
+        });
+        
+        if (!res.ok) throw new Error('Error al cargar empleados desde Supabase');
+        
+        const data = await res.json();
+        select.replaceChildren(); // Limpiar opciones previas
+        
+        if (data.length === 0) {
+            select.add(new Option('No hay empleados registrados', ''));
+            return;
+        }
+
+        select.add(new Option('Seleccione un empleado...', ''));
+        data.forEach(emp => {
+            empleadosMap[emp.id] = `${emp.nombre} (${emp.cargo})`;
+            const opt = document.createElement('option');
+            opt.value = emp.id;
+            opt.textContent = `${emp.nombre} - ${emp.cargo}`;
+            select.append(opt);
+        });
+    } catch (e) {
+        console.error(e);
+        select.replaceChildren();
+        select.add(new Option('Error al cargar empleados', ''));
+        mostrarMensaje('No se pudieron cargar los empleados: ' + e.message, true);
+    }
+}
+
+async function cargarTurnos() {
+    if (SUPABASE_URL.includes("TU_SUPABASE")) {
+        mostrarMensaje('⚠️ Configura tus credenciales de Supabase en el script del archivo.', true);
+        return;
+    }
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/rest/v1/turnos?select=*&order=fecha.desc`, {
+            headers: { 
+                apikey: SUPABASE_KEY, 
+                Authorization: `Bearer ${SUPABASE_KEY}` 
+            }
+        });
+        if (!res.ok) throw new Error('Error al conectar con Supabase');
+        turnos = await res.json();
+        render();
+    } catch (e) {
+        mostrarMensaje('Error cargando turnos: ' + e.message, true);
+    }
+}
+
+function render() {
+    const tbody = $('listaTurnos');
+    tbody.replaceChildren();
+
+    if (turnos.length === 0) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 5;
+        td.textContent = 'No hay turnos registrados.';
+        td.style.textAlign = 'center';
+        tr.append(td);
+        tbody.append(tr);
+        return;
+    }
+
+    turnos.forEach(t => {
+        const tr = document.createElement('tr');
+        const nombreEmp = empleadosMap[t.empleado_id] ? empleadosMap[t.empleado_id] : `ID: ${t.empleado_id}`;
+
+        [t.id, nombreEmp, t.fecha, t.hora_inicio, t.hora_fin].forEach(val => {
+            const td = document.createElement('td');
+            td.textContent = val ?? '';
+            tr.append(td);
+        });
+
+        tbody.append(tr);
+    });
+}
+
+$('formulario').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nuevoTurno = {
+        empleado_id: parseInt($('empleado_id').value),
+        fecha: $('fecha').value,
+        hora_inicio: $('hora_inicio').value,
+        hora_fin: $('hora_fin').value
+    };
+
+    try {
+        const baseUrl = SUPABASE_URL.replace(/\/$/, '');
+        const res = await fetch(`${baseUrl}/rest/v1/turnos`, {
+            method: 'POST',
+            headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(nuevoTurno)
+        });
+        
+        if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(errText);
+        }
+
+        $('formulario').reset();
+        await cargarTurnos();
+        mostrarMensaje('¡Turno guardado con éxito!');
+    } catch (err) {
+        mostrarMensaje('Error al guardar el turno: ' + err.message, true);
+    }
+});
+
+$('cancelarBtn').onclick = () => $('formulario').reset();
+
+// Cargar datos al iniciar
+cargarEmpleadosSelect().then(() => {
+    cargarTurnos();
+});
+</script>
+</body>
+</html>

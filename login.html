@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Búfalo Gourmet - Inicio de Sesión</title>
+<style>
+:root{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;color:#f4f4f4;background:#1a1a1a}
+body{margin:0;display:grid;place-items:center;min-height:100vh;background:radial-gradient(circle at top,#3a0d0d 0%,#1a1a1a 70%)}
+main{max-width:420px;width:90%;background:#2a2a2a;padding:34px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.6);border-top:5px solid #8b0000;border-bottom:3px solid #d2691e;box-sizing:border-box}
+.logo-container{text-align:center;margin-bottom:18px}
+.logo-img{max-width:130px;height:auto;display:block;margin:0 auto 10px auto;filter:drop-shadow(0px 4px 8px rgba(0,0,0,0.4))}
+h1{font-size:22px;margin:0;text-transform:uppercase;color:#fff;letter-spacing:0.5px}
+.subtitle{font-size:13px;color:#f39c12;margin:5px 0 0 0;font-weight:bold}
+label{display:block;font-size:13px;color:#ccc;margin-top:14px;font-weight:bold}
+input{box-sizing:border-box;width:100%;padding:12px;margin-top:6px;border-radius:6px;border:1px solid #444;background:#1a1a1a;color:#fff;font-size:14px}
+input:focus{outline:none;border-color:#f39c12}
+button{box-sizing:border-box;width:100%;padding:13px;margin-top:18px;border-radius:6px;border:0;background:#8b0000;color:white;cursor:pointer;font-weight:bold;font-size:15px;transition:background 0.2s}
+button:hover{background:#a93226}
+.btn-secundario{background:#3d3d3d;margin-top:10px;font-size:13px;padding:10px;color:#f39c12}
+.btn-secundario:hover{background:#4f4f4f}
+#mensaje{margin-top:14px;padding:10px;border-radius:6px;font-size:13px;font-weight:bold;display:none;text-align:center}
+.error{display:block !important;background:#512d2d;color:#ff8080;border:1px solid #8b0000}
+.exito{display:block !important;background:#2d5135;color:#80ff9f;border:1px solid #27ae60}
+.info{display:block !important;background:#2c3e50;color:#ecf0f1}
+.helper-box{margin-top:18px;padding-top:14px;border-top:1px solid #3d3d3d;font-size:12px;color:#aaa;text-align:center}
+.cred-pill{display:inline-block;background:#1a1a1a;border:1px solid #444;padding:4px 8px;border-radius:4px;color:#f39c12;cursor:pointer;margin-top:6px}
+.cred-pill:hover{border-color:#f39c12}
+</style>
+</head>
+<body>
+<main>
+    <div class="logo-container">
+        <img src="logo.png" alt="Búfalo Gourmet Logo" class="logo-img" onerror="this.style.display='none'">
+        <h1>Búfalo Gourmet</h1>
+        <p class="subtitle">Acceso al Sistema POS & SCM</p>
+    </div>
+
+    <form id="login">
+        <label for="correo">Correo electrónico
+            <input id="correo" type="email" placeholder="admin@bufalogourmet.com" autocomplete="username" required>
+        </label>
+        <label for="clave">Contraseña
+            <input id="clave" type="password" placeholder="••••••••" autocomplete="current-password" required>
+        </label>
+        <button type="submit" id="btnIngresar">Iniciar Sesión</button>
+        <button type="button" class="btn-secundario" id="btnCrearCuenta">➕ Crear este usuario en Supabase Auth</button>
+    </form>
+
+    <div id="mensaje" role="status"></div>
+
+    <div class="helper-box">
+        <div>¿Prueba rápida local? Haz clic para autocompletar:</div>
+        <span class="cred-pill" id="btnAutocompletar">🔑 admin@bufalogourmet.com / bufalo2026</span>
+    </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// CONFIGURACIÓN DIRECTA DE SUPABASE (Sin depender de archivos externos rotos)
+const SUPABASE_URL = "https://cuoyvtybvosxfpthcrbe.supabase.co"; 
+const SUPABASE_KEY = "sb_publishable_X7_VB3rLXgT1U257tuLwtQ_SBNONS1F"; 
+
+// Credenciales maestras de respaldo para que nunca te quedes bloqueado si no has confirmado el correo en Supabase
+const ADMIN_RESPALDO = {
+    correo: "admin@bufalogourmet.com",
+    clave: "bufalo2026",
+    rol: "Administrador General"
+};
+
+const $ = id => document.getElementById(id);
+const msg = $('mensaje');
+
+function mostrarEstado(texto, tipo = 'info') {
+    msg.textContent = texto;
+    msg.className = tipo;
+}
+
+// Inicializar cliente Supabase si la librería cargó
+const db = (window.supabase && window.supabase.createClient) 
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) 
+    : null;
+
+// Verificar si ya hay sesión iniciada
+async function verificarSesionExistente() {
+    if (sessionStorage.getItem('bufalo_sesion_activa') === 'true') {
+        location.replace('index.html');
+        return;
+    }
+    if (db) {
+        try {
+            const { data } = await db.auth.getSession();
+            if (data?.session) {
+                sessionStorage.setItem('bufalo_sesion_activa', 'true');
+                sessionStorage.setItem('bufalo_usuario', data.session.user.email);
+                location.replace('index.html');
+            }
+        } catch (e) {
+            console.warn("Verificación inicial de sesión:", e);
+        }
+    }
+}
+verificarSesionExistente();
+
+// Botón para autocompletar credenciales maestras en 1 clic
+$('btnAutocompletar').onclick = () => {
+    $('correo').value = ADMIN_RESPALDO.correo;
+    $('clave').value = ADMIN_RESPALDO.clave;
+    mostrarEstado('Credenciales de administrador cargadas. Presiona "Iniciar Sesión".', 'info');
+};
+
+// Iniciar sesión (Valida primero contra Supabase Auth y tiene respaldo maestro local/tabla)
+$('login').onsubmit = async (e) => {
+    e.preventDefault();
+    const correo = $('correo').value.trim().toLowerCase();
+    const clave = $('clave').value;
+
+    mostrarEstado('Verificando acceso en Búfalo Gourmet…', 'info');
+    $('btnIngresar').disabled = true;
+
+    try {
+        // 1. Intentar inicio de sesión oficial en Supabase Auth
+        if (db) {
+            const { data, error } = await db.auth.signInWithPassword({
+                email: correo,
+                password: clave
+            });
+
+            if (!error && data?.session) {
+                sessionStorage.setItem('bufalo_sesion_activa', 'true');
+                sessionStorage.setItem('bufalo_usuario', correo);
+                mostrarEstado('¡Acceso concedido! Redirigiendo al menú principal…', 'exito');
+                setTimeout(() => location.replace('index.html'), 600);
+                return;
+            }
+
+            // Si falla en Supabase Auth pero coincide con el acceso maestro de Búfalo Gourmet, permitir entrada
+            if (correo === ADMIN_RESPALDO.correo && clave === ADMIN_RESPALDO.clave) {
+                sessionStorage.setItem('bufalo_sesion_activa', 'true');
+                sessionStorage.setItem('bufalo_usuario', correo);
+                mostrarEstado('¡Acceso administrativo concedido! Entrando al sistema…', 'exito');
+                setTimeout(() => location.replace('index.html'), 600);
+                return;
+            }
+
+            throw new Error(error?.message || 'Credenciales incorrectas.');
+        } else {
+            // Si no hay conexión al CDN, validar con credencial maestra
+            if (correo === ADMIN_RESPALDO.correo && clave === ADMIN_RESPALDO.clave) {
+                sessionStorage.setItem('bufalo_sesion_activa', 'true');
+                sessionStorage.setItem('bufalo_usuario', correo);
+                location.replace('index.html');
+                return;
+            }
+            throw new Error('No se pudo conectar con Supabase Auth.');
+        }
+    } catch (err) {
+        let textoError = err.message;
+        if (textoError.includes('Invalid login credentials')) {
+            textoError = 'Correo o contraseña incorrectos (o el usuario aún no ha sido creado en Supabase Auth).';
+        } else if (textoError.includes('Email not confirmed')) {
+            textoError = 'El correo aún no ha sido confirmado en Supabase (Usa el acceso rápido de abajo o desactiva "Confirm email" en Supabase Auth).';
+        }
+        mostrarEstado('❌ ' + textoError, 'error');
+    } finally {
+        $('btnIngresar').disabled = false;
+    }
+};
+
+// Botón auxiliar para registrar directamente el correo y contraseña escritos en Supabase Auth
+$('btnCrearCuenta').onclick = async () => {
+    const correo = $('correo').value.trim().toLowerCase();
+    const clave = $('clave').value;
+
+    if (!correo || clave.length < 6) {
+        mostrarEstado('⚠️ Para crear un usuario en Supabase, escribe un correo válido y una contraseña de mínimo 6 caracteres.', 'error');
+        return;
+    }
+
+    if (!db) {
+        mostrarEstado('❌ Librería de Supabase no disponible.', 'error');
+        return;
+    }
+
+    mostrarEstado('Registrando usuario en Supabase Auth…', 'info');
+    try {
+        const { data, error } = await db.auth.signUp({
+            email: correo,
+            password: clave
+        });
+
+        if (error) throw error;
+
+        if (data?.session) {
+            sessionStorage.setItem('bufalo_sesion_activa', 'true');
+            sessionStorage.setItem('bufalo_usuario', correo);
+            mostrarEstado('✅ ¡Usuario creado e iniciado con éxito! Redirigiendo…', 'exito');
+            setTimeout(() => location.replace('index.html'), 800);
+        } else {
+            mostrarEstado('✅ Usuario registrado en Supabase Auth. Si tienes activada la confirmación por correo en Supabase, revisa tu bandeja o ingresa con la cuenta maestra.', 'exito');
+        }
+    } catch (err) {
+        mostrarEstado('❌ Error al registrar: ' + err.message, true);
+        msg.className = 'error';
+    }
+};
+</script>
+</body>
+</html>
